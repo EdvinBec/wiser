@@ -31,9 +31,11 @@ public class SessionConfig : IEntityTypeConfiguration<Session>
             .WithMany(r => r.Sessions)
             .HasForeignKey(x => x.RoomId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        b.Property(x => x.GroupName)
-            .HasMaxLength(32);
+        
+        b.HasOne(x => x.Group)
+            .WithMany(g => g.Sessions)
+            .HasForeignKey(x => x.GroupId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         b.Property(x => x.Type)
             .HasConversion<int>();

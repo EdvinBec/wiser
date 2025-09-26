@@ -19,16 +19,16 @@ public static class Selectors
     
     public static readonly Dictionary<string, string> CourseMap = new()
     {
-        { "BU10", "form\\:j_idt175_1" },
+        /*{ "BU10", "form\\:j_idt175_1" },
         { "BV10", "form\\:j_idt175_2" },
         { "BU80", "form\\:j_idt175_3" },
         { "BV30", "form\\:j_idt175_4" },
         { "BU50", "form\\:j_idt175_5" },
-        { "BU20", "form\\:j_idt175_6" },
+        { "BU20", "form\\:j_idt175_6" },*/
         { "BV20", "form\\:j_idt175_7" },
-        { "BU40", "form\\:j_idt175_8" },
+        /*{ "BU40", "form\\:j_idt175_8" },
         { "BU70", "form\\:j_idt175_9" },
-        /*{ "BV70", "form\\:j_idt175_10" },
+        { "BV70", "form\\:j_idt175_10" },
         { "BMM7", "form\\:j_idt175_11" },
         { "BM10", "form\\:j_idt175_12" },
         { "BM80", "form\\:j_idt175_13" },

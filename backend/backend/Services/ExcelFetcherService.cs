@@ -40,7 +40,7 @@ public class ExcelFetcherService : IAsyncLifetime
         var downloadPath = "/Users/edvinbecic/Personal/wiser/backend/backend/Data/ExcelFiles";
         Directory.CreateDirectory(downloadPath);
 
-        var filename = $"{courseCode}-{grade}.xlsx";
+        var filename = $"{courseCode}-{grade}.xls";
         var finalPath = Path.Combine(downloadPath, filename);
         var tempPath = Path.Combine(downloadPath, $"{courseCode}-{grade}.download");
         
