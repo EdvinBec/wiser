@@ -12,8 +12,9 @@ public class AppDbContext : DbContext
     public DbSet<Class> Classes { get; set; }
     public DbSet<Instructor> Instructors { get; set; }
     public DbSet<Room> Rooms { get; set; }
+    public DbSet<Group> Groups { get; set; }
     public DbSet<Session> Sessions { get; set; }
-
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new SessionConfig());

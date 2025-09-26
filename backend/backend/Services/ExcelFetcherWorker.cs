@@ -5,13 +5,15 @@ namespace backend.Services;
 public class ExcelFetcherWorker : BackgroundService
 {
     private readonly ExcelFetcherService _fetcher;
+    private readonly ExcelParserService _parser;
     private readonly ILogger<ExcelFetcherWorker> _log;
     
-    private static readonly int[] GradesToFetch = { 1, 2, 3 }; 
+    private static readonly int[] GradesToFetch = { 2 }; 
 
-    public ExcelFetcherWorker(ExcelFetcherService fetcher, ILogger<ExcelFetcherWorker> log)
+    public ExcelFetcherWorker(ExcelFetcherService fetcher, ExcelParserService parser, ILogger<ExcelFetcherWorker> log)
     {
         _fetcher = fetcher;
+        _parser = parser;
         _log = log;
     }
 

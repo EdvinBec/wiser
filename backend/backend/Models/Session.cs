@@ -11,6 +11,7 @@ public class Session
     public int ClassId { get; set; }
     public int InstructorId { get; set; }
     public int RoomId { get; set; }
+    public int GroupId { get; set; }
     
     public Course Course { get; set; }
     public Class Class { get; set; }
@@ -19,5 +20,5 @@ public class Session
     public DateTime StartAt { get; set; }
     public DateTime FinishAt { get; set; }
     public SessionType Type { get; set; }
-    public string? GroupName { get; set; }
+    public Group? Group { get; set; }
 }
