@@ -1,7 +1,12 @@
 import "./App.css";
+import { Timetable } from "./container/Timetable";
 
 function App() {
-  return <></>;
+  return (
+    <>
+      <Timetable />
+    </>
+  );
 }
 
 export default App;

@@ -57,6 +57,52 @@ public class TimetableController : ControllerBase
         return Ok(sessions);
     }
     
+    [HttpGet("day/{year:int}/{month:int}/{day:int}/{courseId:int}")]
+    public async Task<IActionResult> GetTimetablesForDay(int year, int month, int day, int courseId)
+    {
+        var (startUtc, endUtc) = DateHelpers.GetLocalDayWindowUtc(year, month, day);
+
+        var rows = await _database.Sessions
+            .Where(s => s.CourseId == courseId &&
+                        s.StartAt >= startUtc &&
+                        s.StartAt <  endUtc)
+            .Select(s => new
+            {
+                s.Id,
+                s.ClassId,
+                ClassName = s.Class.Name,
+                s.InstructorId,
+                InstructorName = s.Instructor.Name,
+                s.RoomId,
+                RoomName = s.Room.Code,
+                s.Type,
+                s.GroupId,
+                GroupName = s.Group != null ? s.Group.Name : null,
+                s.StartAt,   // UTC in DB (timestamptz)
+                s.FinishAt
+            })
+            .ToListAsync();
+
+        var sessions = rows.Select(r => new SessionDto
+        {
+            Id = r.Id,
+            ClassId = r.ClassId,
+            ClassName = r.ClassName,
+            InstructorId = r.InstructorId,
+            InstructorName = r.InstructorName,
+            RoomId = r.RoomId,
+            RoomName = r.RoomName,
+            Type = r.Type,
+            GroupId = r.GroupId,
+            GroupName = r.GroupName,
+            // respond in Ljubljana time (with +01/+02 offset in JSON)
+            StartAt  = DateHelpers.ToLjubljana(r.StartAt),
+            FinishAt = DateHelpers.ToLjubljana(r.FinishAt)
+        }).ToList();
+
+        return Ok(sessions);
+    }
+    
     [HttpGet("groups")]
     public async Task<IActionResult> GetGroups()
     {
