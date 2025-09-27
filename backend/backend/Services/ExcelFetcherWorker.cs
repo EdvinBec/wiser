@@ -38,8 +38,7 @@ public class ExcelFetcherWorker : BackgroundService
                             await _fetcher.DownloadsExcel(courseCode, grade);
                             _log.LogInformation("Done: {CourseCode}-{Grade}", courseCode, grade);
                             
-                            var jitterMs = Random.Shared.Next(10_000, 25_000);
-                            await Task.Delay(TimeSpan.FromMinutes(1) + TimeSpan.FromMilliseconds(jitterMs), stoppingToken);
+                            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
                         }
                         catch (Exception ex)
                         {
@@ -50,7 +49,7 @@ public class ExcelFetcherWorker : BackgroundService
                 }
 
                 _log.LogInformation("Excel fetch sweep complete. Sleeping until next cycle");
-                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
             catch (TaskCanceledException) { /* app shutting down */ }
             catch (Exception ex)

@@ -1,5 +1,6 @@
 using System.Data;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using backend.Configs;
 using backend.Helpers;
 using backend.Infrastructure.Database;
@@ -156,12 +157,25 @@ public class ExcelParserService
                             var groups = row.GetCell(5)?.ToString() ?? string.Empty;
                             var input = ExcelParserConfig.NormalizeSpaces(groups);
                             var prefix = globalGroup;
-                            var parsedGroups = input.Split("VS");
-                            List<int> groupIds = new List<int>();
+                            
+                            var parts = Regex.Split(input ?? string.Empty, @"\s*VS\s*", RegexOptions.IgnoreCase)
+                                .Select(p => p.Trim())
+                                .Where(p => p.Length > 0)
+                                .ToArray();
 
-                            foreach (var group in GroupParsing.FlattenGroups(parsedGroups))
+                            bool isExercise = sessionType is SessionType.ComputerExercise
+                                or SessionType.LabExercise
+                                or SessionType.SeminarExercise;
+
+                            // For exercises: if there are multiple parts, skip the first (e.g., skip "RIT 2")
+                            var partsToParse = (isExercise && parts.Length > 1) ? parts.Skip(1).ToArray() : parts;
+
+                            List<int> groupIds = new();
+
+                            foreach (var group in GroupParsing.FlattenGroups(partsToParse))
                             {
-                                var groupId = await database.CreateGroupAsync(group);
+                                if (string.IsNullOrWhiteSpace(group)) continue;
+                                var groupId = await database.CreateGroupAsync(group.Trim());
                                 groupIds.Add(groupId);
                             }
 
