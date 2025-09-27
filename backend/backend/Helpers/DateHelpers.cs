@@ -55,4 +55,22 @@ public static class DateHelpers
         var tz = GetLjubljanaTz();
         return TimeZoneInfo.ConvertTime(new DateTimeOffset(utcInstant, TimeSpan.Zero), tz);
     }
+    
+    // in DateHelpers.cs
+    public static (DateTime startUtc, DateTime endUtc) GetLocalDayWindowUtc(int year, int month, int day)
+    {
+        var tz = OperatingSystem.IsWindows()
+            ? TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time")
+            : TimeZoneInfo.FindSystemTimeZoneById("Europe/Ljubljana");
+
+        // Local midnight (Unspecified → interpret in tz)
+        var startLocal = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Unspecified);
+        var endLocal   = startLocal.AddDays(1); // next local midnight
+
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, tz);
+        var endUtc   = TimeZoneInfo.ConvertTimeToUtc(endLocal,   tz);
+
+        return (startUtc, endUtc); // half-open [start, end)
+    }
+
 }
