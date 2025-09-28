@@ -1,8 +1,8 @@
 import type { TimetableEvent } from "@/types/TimetableEvent";
 import type { TimetableEventType } from "@/types/TimetableEventType";
 
-const API_BASE = "http://localhost:5013/api/Timetable";
-const COURSE_CODE = 4; // fixed per requirements
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const COURSE_CODE = 1; // fixed per requirements
 
 type ApiEvent = {
   id: number;

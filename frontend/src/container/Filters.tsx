@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import type { TimetableEvent } from "./ScheduleColumn";
 import type { ClassInfo, GroupInfo } from "@/lib/api";
+import type { TimetableEvent } from "@/types/TimetableEvent";
 
 type Props = {
   events: TimetableEvent[];
@@ -10,11 +10,20 @@ type Props = {
   onChange: (next: Record<number, number[]>) => void;
 };
 
-export function Filters({ events, classes, groups, selected, onChange }: Props) {
+export function Filters({
+  events,
+  classes,
+  groups,
+  selected,
+  onChange,
+}: Props) {
   const [open, setOpen] = useState(false);
 
   const groupsByClassFromEvents = useMemo(() => {
-    const map = new Map<number, { className: string; groups: { id: number; name: string }[] }>();
+    const map = new Map<
+      number,
+      { className: string; groups: { id: number; name: string }[] }
+    >();
     const classNameById = new Map<number, string>();
     classes.forEach((c) => classNameById.set(c.id, c.name));
     const groupNameById = new Map<number, string>();
@@ -28,8 +37,14 @@ export function Filters({ events, classes, groups, selected, onChange }: Props) 
     }
     for (const [classId, groupMap] of tmp) {
       map.set(classId, {
-        className: classNameById.get(classId) ?? events.find((e) => e.classId === classId)?.className ?? String(classId),
-        groups: Array.from(groupMap.entries()).map(([id, name]) => ({ id, name })),
+        className:
+          classNameById.get(classId) ??
+          events.find((e) => e.classId === classId)?.className ??
+          String(classId),
+        groups: Array.from(groupMap.entries()).map(([id, name]) => ({
+          id,
+          name,
+        })),
       });
     }
     return map;
@@ -69,56 +84,65 @@ export function Filters({ events, classes, groups, selected, onChange }: Props) 
         <div className="mt-3 border rounded-md p-3 bg-white">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold">Filter by class and group</h4>
-            <button onClick={clearAll} className="text-xs text-blue-600 hover:underline">
+            <button
+              onClick={clearAll}
+              className="text-xs text-blue-600 hover:underline"
+            >
               Clear all
             </button>
           </div>
 
-          {Array.from(groupsByClassFromEvents.entries()).map(([classId, info]) => {
-            const ids = info.groups.map((g) => g.id);
-            const sel = new Set(selected[classId] ?? []);
-            return (
-              <div key={classId} className="py-2 border-t first:border-t-0">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">{info.className}</div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      className="text-xs text-blue-600 hover:underline"
-                      onClick={() => selectAllForClass(classId, ids)}
-                    >
-                      Select all
-                    </button>
-                    <button
-                      className="text-xs text-blue-600 hover:underline"
-                      onClick={() => clearForClass(classId)}
-                    >
-                      Clear
-                    </button>
+          {Array.from(groupsByClassFromEvents.entries()).map(
+            ([classId, info]) => {
+              const ids = info.groups.map((g) => g.id);
+              const sel = new Set(selected[classId] ?? []);
+              return (
+                <div key={classId} className="py-2 border-t first:border-t-0">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">{info.className}</div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="text-xs text-blue-600 hover:underline"
+                        onClick={() => selectAllForClass(classId, ids)}
+                      >
+                        Select all
+                      </button>
+                      <button
+                        className="text-xs text-blue-600 hover:underline"
+                        onClick={() => clearForClass(classId)}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    {info.groups.map((g) => (
+                      <label
+                        key={g.id}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-blue-600"
+                          checked={sel.has(g.id)}
+                          onChange={() => toggleGroup(classId, g.id)}
+                        />
+                        <span>{g.name}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-3">
-                  {info.groups.map((g) => (
-                    <label key={g.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        className="accent-blue-600"
-                        checked={sel.has(g.id)}
-                        onChange={() => toggleGroup(classId, g.id)}
-                      />
-                      <span>{g.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+              );
+            }
+          )}
 
           {groupsByClassFromEvents.size === 0 && (
-            <div className="text-sm text-gray-500">No classes to filter for the current view.</div>
+            <div className="text-sm text-gray-500">
+              No classes to filter for the current view.
+            </div>
           )}
         </div>
       )}
     </div>
   );
 }
-

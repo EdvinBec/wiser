@@ -1,7 +1,7 @@
-import { ljTimeFmt, toPxFromDate } from "@/Helpers/DateHelpers";
+import { toPxFromDate } from "@/Helpers/DateHelpers";
 import type { LaidOut } from "@/types/LaidOut";
-import type { TimetableEvent } from "@/types/TimetableEvent";
 import { TimetableEventBlock } from "./TimetableEventBlock";
+import type { TimetableEvent } from "@/types/TimetableEvent";
 
 type Props = {
   hours: number[];
