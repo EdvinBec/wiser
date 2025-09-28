@@ -2,7 +2,7 @@ import type { TimetableEvent } from "@/types/TimetableEvent";
 import type { TimetableEventType } from "@/types/TimetableEventType";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
-const COURSE_CODE = 1; // fixed per requirements
+const COURSE_CODE = 4; // fixed per requirements
 
 type ApiEvent = {
   id: number;
@@ -22,14 +22,14 @@ type ApiEvent = {
 function mapApiEvent(e: ApiEvent): TimetableEvent {
   return {
     id: String(e.id),
-    classId: e.classId,
+    classId: Number(e.classId),
     className: e.className,
-    instructorId: e.instructorId,
+    instructorId: Number(e.instructorId),
     instructorName: e.instructorName,
-    roomId: e.roomId,
+    roomId: Number(e.roomId),
     roomName: e.roomName,
     type: (e.type as TimetableEventType) ?? "Lecture",
-    groupId: e.groupId,
+    groupId: Number(e.groupId),
     groupName: e.groupName,
     startAt: new Date(e.startAt),
     finishAt: new Date(e.finishAt),

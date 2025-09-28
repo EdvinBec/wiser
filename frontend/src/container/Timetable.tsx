@@ -79,7 +79,16 @@ export function Timetable() {
     () => {
       try {
         const raw = localStorage.getItem("timetableGroupFilterV1");
-        return raw ? JSON.parse(raw) : {};
+        if (!raw) return {};
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const normalized: Record<number, number[]> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (Array.isArray(v)) {
+            const nums = v.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+            normalized[Number(k)] = nums;
+          }
+        }
+        return normalized;
       } catch {
         return {};
       }
@@ -338,7 +347,8 @@ export function Timetable() {
     return events.filter((ev) => {
       const selected = groupFilter[ev.classId];
       if (!selected || selected.length === 0) return true;
-      return selected.includes(ev.groupId);
+      const selectedSet = new Set(selected.map((v) => Number(v)));
+      return selectedSet.has(Number(ev.groupId));
     });
   }, [events, groupFilter]);
 

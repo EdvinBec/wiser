@@ -44,10 +44,10 @@ export function TimetableEventBlock({
       darkText: "dark:text-stone-200",
     },
     SeminarExercise: {
-      bg: "bg-amber-200",
-      text: "text-amber-900",
-      darkBg: "dark:bg-amber-900/30",
-      darkText: "dark:text-amber-200",
+      bg: "bg-green-200",
+      text: "text-green-900",
+      darkBg: "dark:bg-green-900/30",
+      darkText: "dark:text-green-200",
     },
     Exercise: {
       bg: "bg-fuchsia-200",
