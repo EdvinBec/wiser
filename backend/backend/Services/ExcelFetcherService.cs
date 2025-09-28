@@ -24,7 +24,7 @@ public class ExcelFetcherService : IAsyncLifetime
 
         if (_browser == null)
         {
-            _browser = await _playwright.Chromium.LaunchAsync(new() { Headless = false, SlowMo = 250});
+            _browser = await _playwright.Chromium.LaunchAsync(new() { Headless = true, SlowMo = 250});
         }
     }
 
@@ -37,7 +37,8 @@ public class ExcelFetcherService : IAsyncLifetime
     public async Task DownloadsExcel(string courseCode, int grade)
     {
         await InitializeAsync();
-        var downloadPath = "/Users/edvinbecic/Personal/wiser/backend/backend/Data/ExcelFiles";
+        var downloadPath = Environment.GetEnvironmentVariable("DOWNLOAD_PATH")
+                           ?? "/Users/edvinbecic/Personal/wiser/backend/backend/Data/ExcelFiles";
         Directory.CreateDirectory(downloadPath);
 
         var filename = $"{courseCode}-{grade}.xls";

@@ -9,8 +9,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 // EF Core
-builder.Services.AddDbContextPool<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    // First try environment variable
+    var envConn = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+
+    // Fallback to appsettings.json if no env var
+    var connStr = string.IsNullOrEmpty(envConn)
+        ? builder.Configuration.GetConnectionString("DefaultConnection")
+        : envConn;
+
+    options.UseNpgsql(connStr);
+});
 
 // App services (check that singletons don't depend on scoped DbContext)
 builder.Services.AddSingleton<ExcelFetcherService>();
@@ -42,6 +52,12 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();   // runs `dotnet ef database update` equivalent
+}
 
 if (app.Environment.IsDevelopment())
 {

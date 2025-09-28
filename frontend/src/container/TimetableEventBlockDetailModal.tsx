@@ -19,7 +19,9 @@ export function TimetableEventBlockDetails({
   return (
     <Modal open={open} onClose={onClose} showHeader={false}>
       {!event ? (
-        <div className="text-sm text-muted-foreground">{t.common.noEventSelected}</div>
+        <div className="text-sm text-muted-foreground">
+          {t.common.noEventSelected}
+        </div>
       ) : (
         <div className="space-y-6 px-4 sm:px-6 py-4">
           {/* Large title like previous design */}
@@ -33,7 +35,9 @@ export function TimetableEventBlockDetails({
             <div className="flex flex-col sm:flex-row sm:items-center sm:h-9 gap-1 sm:gap-0">
               <div className="flex items-center gap-2 text-muted-foreground sm:w-36 w-full">
                 <Tags size={16} />
-                <span className="text-sm text-muted-foreground">{t.details.type}</span>
+                <span className="text-sm text-muted-foreground">
+                  {t.details.type}
+                </span>
               </div>
               <div className="sm:ml-2 min-w-0">
                 <span className="inline-flex items-center rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-0.5 font-medium">
@@ -46,7 +50,9 @@ export function TimetableEventBlockDetails({
             <div className="flex flex-col sm:flex-row sm:items-center sm:h-9 gap-1 sm:gap-0">
               <div className="flex items-center gap-2 text-muted-foreground sm:w-36 w-full">
                 <Clock size={16} />
-                <span className="text-sm text-muted-foreground">{t.details.time}</span>
+                <span className="text-sm text-muted-foreground">
+                  {t.details.time}
+                </span>
               </div>
               <div className="sm:ml-2 text-foreground font-medium min-w-0 truncate">
                 {ljTimeFmt.format(event.startAt)}–
@@ -58,9 +64,14 @@ export function TimetableEventBlockDetails({
             <div className="flex flex-col sm:flex-row sm:items-center sm:h-9 gap-1 sm:gap-0">
               <div className="flex items-center gap-2 text-muted-foreground sm:w-36 w-full">
                 <GraduationCap size={16} />
-                <span className="text-sm text-muted-foreground">{t.details.instructor}</span>
+                <span className="text-sm text-muted-foreground">
+                  {t.details.instructor}
+                </span>
               </div>
-              <div className="sm:ml-2 text-foreground min-w-0 truncate" title={event.instructorName || undefined}>
+              <div
+                className="sm:ml-2 text-foreground min-w-0 truncate"
+                title={event.instructorName || undefined}
+              >
                 {event.instructorName || "N/A"}
               </div>
             </div>
@@ -69,7 +80,9 @@ export function TimetableEventBlockDetails({
             <div className="flex flex-col sm:flex-row sm:items-center sm:h-9 gap-1 sm:gap-0">
               <div className="flex items-center gap-2 text-muted-foreground sm:w-36 w-full">
                 <MapPin size={16} />
-                <span className="text-sm text-muted-foreground">{t.details.room}</span>
+                <span className="text-sm text-muted-foreground">
+                  {t.details.room}
+                </span>
               </div>
               <div className="sm:ml-2 min-w-0">
                 <span className="inline-flex items-center rounded-md bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300 text-xs px-2 py-0.5 font-medium">
@@ -82,9 +95,14 @@ export function TimetableEventBlockDetails({
             <div className="flex flex-col sm:flex-row sm:items-center sm:h-9 gap-1 sm:gap-0">
               <div className="flex items-center gap-2 text-muted-foreground sm:w-36 w-full">
                 <Users size={16} />
-                <span className="text-sm text-muted-foreground">{t.details.group}</span>
+                <span className="text-sm text-muted-foreground">
+                  {t.details.group}
+                </span>
               </div>
-              <div className="sm:ml-2 text-foreground min-w-0 truncate" title={event.groupName || undefined}>
+              <div
+                className="sm:ml-2 text-foreground min-w-0 truncate"
+                title={event.groupName || undefined}
+              >
                 {event.groupName || "N/A"}
               </div>
             </div>
