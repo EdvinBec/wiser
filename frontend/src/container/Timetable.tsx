@@ -241,8 +241,10 @@ export function Timetable() {
         } else if (selectedView === "day" && selectedDay) {
           const month = selectedDay.getMonth() + 1;
           const day = selectedDay.getDate();
+          // For day view, backend expects calendar year, not academic year
+          const calendarYear = selectedDay.getFullYear();
           const data = await fetchDayTimetable(
-            academicYear,
+            calendarYear,
             month,
             day,
             controller.signal
