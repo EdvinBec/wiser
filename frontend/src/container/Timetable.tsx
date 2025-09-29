@@ -29,16 +29,18 @@ import { useI18n } from "@/lib/i18n";
 import { EventTypeIndicator } from "@/components/EventTypeIndicator.tsx";
 
 const LS = {
-  view: "timetableSelectedViewV1",
-  day: "timetableSelectedDayV1",
-  week: "timetableSelectedWeekV1",
-  ay: "timetableSelectedAYV1",
+  view: "timetableSelectedViewV2",
+  day: "timetableSelectedDayV2",
+  week: "timetableSelectedWeekV2",
+  ay: "timetableSelectedAYV2",
 } as const;
 
 export function Timetable() {
   const [selectedView, setSelectedView] = useState<"day" | "week">(() => {
     try {
-      const raw = localStorage.getItem(LS.view);
+      const raw =
+        localStorage.getItem(LS.view) ||
+        localStorage.getItem("timetableSelectedViewV1");
       if (raw === "day" || raw === "week") return raw;
     } catch {}
     if (
@@ -51,14 +53,18 @@ export function Timetable() {
   });
   const [selectedDay, setSelectedDay] = useState<Date | null>(() => {
     try {
-      const raw = localStorage.getItem(LS.day);
+      const raw =
+        localStorage.getItem(LS.day) ||
+        localStorage.getItem("timetableSelectedDayV1");
       if (raw) return new Date(raw);
     } catch {}
     return new Date();
   });
   const [selectedWeek, setSelectedWeek] = useState<number | null>(() => {
     try {
-      const raw = localStorage.getItem(LS.week);
+      const raw =
+        localStorage.getItem(LS.week) ||
+        localStorage.getItem("timetableSelectedWeekV1");
       const n = raw ? Number(raw) : NaN;
       if (Number.isFinite(n) && n > 0) return n;
     } catch {}
@@ -74,7 +80,7 @@ export function Timetable() {
   );
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem("themeV1");
+      const saved = localStorage.getItem("themeV2") || localStorage.getItem("themeV1");
       if (saved === "dark") return true;
       if (saved === "light") return false;
     } catch {}
@@ -175,7 +181,7 @@ export function Timetable() {
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<number>(
     () => {
       try {
-        const raw = localStorage.getItem(LS.ay);
+        const raw = localStorage.getItem(LS.ay) || localStorage.getItem("timetableSelectedAYV1");
         const n = raw ? Number(raw) : NaN;
         if (Number.isFinite(n)) return n;
       } catch {}
@@ -297,7 +303,7 @@ export function Timetable() {
     try {
       const el = document.documentElement;
       el.classList.toggle("dark", isDark);
-      localStorage.setItem("themeV1", isDark ? "dark" : "light");
+      localStorage.setItem("themeV2", isDark ? "dark" : "light");
     } catch {}
   }, [isDark]);
 
@@ -461,11 +467,11 @@ export function Timetable() {
             const top = Math.min(Math.max(rawTop, 8), columnHeight + 8); // clamp within visible area
             return (
               <div
-                className="pointer-events-none absolute inset-x-0 z-20"
+                className="pointer-events-none absolute inset-x-0 z-30"
                 style={{ top }}
               >
                 <div className="absolute left-16 right-0 h-0 border-t-2 border-blue-500" />
-                <div className="absolute left-0 w-16 -translate-y-1/2 text-xs text-blue-600">
+                <div className="absolute left-0 w-16 -translate-y-1/2 text-xs font-semibold text-blue-600">
                   {nowLabel()}
                 </div>
               </div>
@@ -515,15 +521,14 @@ export function Timetable() {
         >
           WISE
         </a>{" "}
-        {t.common.timetable}{" "}
-        {t.common.disclaimerBy}{" "}
+        <span>{t.common.timetable} </span>
         <a
-          href="https://github.com/EdvinBec"
+          href="https://github.com/EdvinBec/wiser"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline decoration-transparent hover:decoration-inherit"
+          className="underline decoration-transparent hover:decoration-inherit p-0 block mt-1"
         >
-          EdvinBec
+          💻 EdvinBec
         </a>
       </div>
     </div>

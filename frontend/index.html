@@ -14,7 +14,7 @@
     <script>
       (function () {
         try {
-          var saved = localStorage.getItem("themeV1");
+          var saved = localStorage.getItem("themeV2") || localStorage.getItem("themeV1");
           var isDark =
             saved === "dark" ||
             (!saved &&

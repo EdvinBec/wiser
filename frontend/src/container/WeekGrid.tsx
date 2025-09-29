@@ -103,10 +103,10 @@ export function WeekGrid({
             );
             return (
               <div
-                className="pointer-events-none absolute left-0 w-16 -translate-y-1/2 z-20"
+                className="pointer-events-none absolute left-0 w-16 -translate-y-1/2 z-30"
                 style={{ top }}
               >
-                <div className="text-xs text-blue-600">{nowLabel()}</div>
+                <div className="text-xs font-semibold text-blue-600">{nowLabel()}</div>
               </div>
             );
           })()}
@@ -153,7 +153,7 @@ export function WeekGrid({
                 const top = Math.min(Math.max(rawTop, 8), columnHeight + 8);
                 return (
                   <div
-                    className="pointer-events-none absolute left-0 right-0 z-20"
+                    className="pointer-events-none absolute left-0 right-0 z-30"
                     style={{ top }}
                   >
                     <div className="h-0 border-t-2 border-blue-500" />
