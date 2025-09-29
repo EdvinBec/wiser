@@ -1,29 +1,36 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { TimetableEventType } from "@/types/TimetableEventType";
 
 export type Locale = "en" | "sl";
 
-  type Dict = {
-    common: {
-      manageFilters: string;
-      save: string;
-      cancel: string;
-      clear: string;
-      clearAll: string;
-      selectAll: string;
-      searchSubjectsPlaceholder: string;
-      pickGroupsHelper: string;
-      noSubjectsMatch: string;
-      loadingTimetable: string;
-      manageFiltersTitle: string;
-      noEventSelected: string;
-      themeLight: string;
-      themeDark: string;
-      switchToLight: string;
-      switchToDark: string;
-      disclaimerPrefix: string;
-      disclaimerBy: string;
-    };
+type Dict = {
+  common: {
+    manageFilters: string;
+    save: string;
+    cancel: string;
+    clear: string;
+    clearAll: string;
+    selectAll: string;
+    searchSubjectsPlaceholder: string;
+    pickGroupsHelper: string;
+    noSubjectsMatch: string;
+    loadingTimetable: string;
+    manageFiltersTitle: string;
+    noEventSelected: string;
+    themeLight: string;
+    themeDark: string;
+    switchToLight: string;
+    switchToDark: string;
+    disclaimerPrefix: string;
+    timetable: string;
+    disclaimerBy: string;
+  };
   header: {
     showBy: string;
     day: string;
@@ -51,7 +58,8 @@ const dicts: Record<Locale, Dict> = {
       clearAll: "Clear all",
       selectAll: "Select all",
       searchSubjectsPlaceholder: "Search subjects…",
-      pickGroupsHelper: "Pick your groups per subject. Keep it simple — adjust anytime.",
+      pickGroupsHelper:
+        "Pick your groups per subject. Keep it simple — adjust anytime.",
       noSubjectsMatch: "No subjects match your search.",
       loadingTimetable: "Loading timetable…",
       manageFiltersTitle: "Manage filters",
@@ -60,7 +68,8 @@ const dicts: Record<Locale, Dict> = {
       themeDark: "Dark",
       switchToLight: "Switch to light mode",
       switchToDark: "Switch to dark mode",
-      disclaimerPrefix: "wiseR operates on data from the WISE timetable.",
+      disclaimerPrefix: "This app uses data from the",
+      timetable: " timetable and is not affiliated with WISE TECHNOLOGIES.",
       disclaimerBy: "Maintained by",
     },
     header: {
@@ -80,6 +89,7 @@ const dicts: Record<Locale, Dict> = {
       Lecture: "Lecture",
       Tutorial: "Tutorial",
       Lab: "Lab",
+      LabExercise: "Lab exercise",
       Seminar: "Seminar",
       SeminarExercise: "Seminar exercise",
       Exercise: "Exercise",
@@ -98,7 +108,8 @@ const dicts: Record<Locale, Dict> = {
       clearAll: "Počisti vse",
       selectAll: "Izberi vse",
       searchSubjectsPlaceholder: "Išči predmete…",
-      pickGroupsHelper: "Izberi svoje skupine za vsak predmet. Preprosto — lahko kadarkoli spremeniš.",
+      pickGroupsHelper:
+        "Izberi svoje skupine za vsak predmet. Preprosto — lahko kadarkoli spremeniš.",
       noSubjectsMatch: "Noben predmet ne ustreza iskanju.",
       loadingTimetable: "Nalaganje urnika…",
       manageFiltersTitle: "Upravljanje filtrov",
@@ -107,7 +118,8 @@ const dicts: Record<Locale, Dict> = {
       themeDark: "Temna",
       switchToLight: "Preklopi na svetlo temo",
       switchToDark: "Preklopi na temno temo",
-      disclaimerPrefix: "wiseR deluje na podatkih iz WISE urnika.",
+      disclaimerPrefix: "Aplikacija uporablja podatke iz",
+      timetable: "urnika in ni povezana s podjetjem WISE TECHNOLOGIES.",
       disclaimerBy: "Vzdržuje",
     },
     header: {
@@ -127,6 +139,7 @@ const dicts: Record<Locale, Dict> = {
       Lecture: "Predavanje",
       Tutorial: "Vaje",
       Lab: "Laboratorij",
+      LabExercise: "Laboratorijske vaje",
       Seminar: "Seminar",
       SeminarExercise: "Seminarske vaje",
       Exercise: "Vaje",
@@ -161,7 +174,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [locale]);
 
-  const value = useMemo<Ctx>(() => ({ locale, t: dicts[locale], setLocale }), [locale]);
+  const value = useMemo<Ctx>(
+    () => ({ locale, t: dicts[locale], setLocale }),
+    [locale]
+  );
   return <I18nCtx.Provider value={value}>{children}</I18nCtx.Provider>;
 }
 

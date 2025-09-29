@@ -37,7 +37,10 @@ export function OnboardingFiltersModal({
   }, [open, initial, classes]);
 
   const groupOptions = useMemo(
-    () => groups.map((g) => ({ id: g.id, name: g.name })),
+    () =>
+      groups
+        .filter((g) => g.name !== "RIT 2")
+        .map((g) => ({ id: g.id, name: g.name })),
     [groups]
   );
 
