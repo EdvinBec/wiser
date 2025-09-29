@@ -29,7 +29,6 @@ type Dict = {
     switchToDark: string;
     disclaimerPrefix: string;
     timetable: string;
-    disclaimerBy: string;
   };
   header: {
     showBy: string;
@@ -69,8 +68,7 @@ const dicts: Record<Locale, Dict> = {
       switchToLight: "Switch to light mode",
       switchToDark: "Switch to dark mode",
       disclaimerPrefix: "This app uses data from the",
-      timetable: " timetable and is not affiliated with WISE TECHNOLOGIES.",
-      disclaimerBy: "Maintained by",
+      timetable: " timetable and is not affiliated with Wise Technologies.",
     },
     header: {
       showBy: "Show by:",
@@ -119,8 +117,7 @@ const dicts: Record<Locale, Dict> = {
       switchToLight: "Preklopi na svetlo temo",
       switchToDark: "Preklopi na temno temo",
       disclaimerPrefix: "Aplikacija uporablja podatke iz",
-      timetable: "urnika in ni povezana s podjetjem WISE TECHNOLOGIES.",
-      disclaimerBy: "Vzdržuje",
+      timetable: "urnika in ni povezana s podjetjem Wise Technologies.",
     },
     header: {
       showBy: "Prikaz:",
@@ -162,7 +159,7 @@ const I18nCtx = createContext<Ctx | null>(null);
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocale] = useState<Locale>(() => {
     try {
-      const saved = localStorage.getItem("localeV1");
+      const saved = localStorage.getItem("localeV2") || localStorage.getItem("localeV1");
       if (saved === "en" || saved === "sl") return saved;
     } catch {}
     return "sl";
@@ -170,7 +167,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem("localeV1", locale);
+      localStorage.setItem("localeV2", locale);
     } catch {}
   }, [locale]);
 
