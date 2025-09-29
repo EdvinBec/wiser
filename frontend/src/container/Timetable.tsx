@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Moon, Sun, Globe, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Moon,
+  Sun,
+  Globe,
+  SlidersHorizontal,
+} from "lucide-react";
 import { RoundedButton } from "@/components/RoundedButton";
 import { Brand } from "@/components/Brand";
 import { TimetableHeader } from "./TimetableHeader.tsx";
@@ -19,6 +26,7 @@ import type { TimetableEvent } from "@/types/TimetableEvent.ts";
 import { ScheduleColumn } from "./ScheduleColumn.tsx";
 import { TimetableEventBlockDetails } from "./TimetableEventBlockDetailModal.tsx";
 import { useI18n } from "@/lib/i18n";
+import { EventTypeIndicator } from "@/components/EventTypeIndicator.tsx";
 
 const LS = {
   view: "timetableSelectedViewV1",
@@ -70,21 +78,21 @@ export function Timetable() {
       if (saved === "dark") return true;
       if (saved === "light") return false;
     } catch {}
-    if (typeof window !== "undefined") {
-      return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-    }
+    // Default to light theme when no preference is saved
     return false;
   });
   const [groupFilter, setGroupFilter] = useState<Record<number, number[]>>(
     () => {
       try {
-        const raw = localStorage.getItem("timetableGroupFilterV1");
+        const raw = localStorage.getItem("timetableGroupFilterV2");
         if (!raw) return {};
         const parsed = JSON.parse(raw) as Record<string, unknown>;
         const normalized: Record<number, number[]> = {};
         for (const [k, v] of Object.entries(parsed)) {
           if (Array.isArray(v)) {
-            const nums = v.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+            const nums = v
+              .map((x) => Number(x))
+              .filter((n) => Number.isFinite(n));
             normalized[Number(k)] = nums;
           }
         }
@@ -268,7 +276,7 @@ export function Timetable() {
         // If no saved filters, open the onboarding modal once data is ready
         const hasSaved = (() => {
           try {
-            const raw = localStorage.getItem("timetableGroupFilterV1");
+            const raw = localStorage.getItem("timetableGroupFilterV2");
             if (!raw) return false;
             const obj = JSON.parse(raw);
             return obj && Object.keys(obj).length > 0;
@@ -297,7 +305,7 @@ export function Timetable() {
   useEffect(() => {
     try {
       localStorage.setItem(
-        "timetableGroupFilterV1",
+        "timetableGroupFilterV2",
         JSON.stringify(groupFilter)
       );
     } catch {}
@@ -345,6 +353,8 @@ export function Timetable() {
   const filteredByGroup = useMemo(() => {
     if (!events.length) return events;
     return events.filter((ev) => {
+      // Always include events for group "RIT 2"
+      if (ev.groupName === "RIT 2") return true;
       const selected = groupFilter[ev.classId];
       if (!selected || selected.length === 0) return true;
       const selectedSet = new Set(selected.map((v) => Number(v)));
@@ -363,8 +373,19 @@ export function Timetable() {
 
   return (
     <div className="px-6 md:px-10 lg:px-16 py-6 md:py-8 max-w-7xl mx-auto overflow-x-hidden">
-      <div className="mb-2">
-        <Brand />
+      <div className="mb-2 gap-4 flex items-center justify-between border-b pb-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-2">
+          <Brand />
+          <span className="text-sm text-muted-foreground text-nowrap">
+            FERI RIT VS 2
+          </span>
+        </div>
+        <div className="flex gap-2 items-center flex-wrap justify-end">
+          <EventTypeIndicator type="Lecture" />
+          <EventTypeIndicator type="ComputerExercise" />
+          <EventTypeIndicator type="LabExercise" />
+          <EventTypeIndicator type="SeminarExercise" />
+        </div>
       </div>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <TimetableHeader
@@ -372,7 +393,7 @@ export function Timetable() {
           selectedDay={selectedDay}
           selectedWeek={selectedWeek}
           onChangeView={(v) => setSelectedView(v)}
-          leftButton={<RoundedButton onClick={onPrev} icon={ChevronLeft} />} 
+          leftButton={<RoundedButton onClick={onPrev} icon={ChevronLeft} />}
           rightButton={
             <div className="flex items-center gap-2">
               <RoundedButton onClick={onNext} icon={ChevronRight} />
@@ -399,7 +420,9 @@ export function Timetable() {
           onClick={() => setLocale(locale === "sl" ? "en" : "sl")}
           className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm text-muted-foreground"
           aria-label="Toggle language"
-          title={locale === "sl" ? "Switch to English" : "Preklopi v slovenščino"}
+          title={
+            locale === "sl" ? "Switch to English" : "Preklopi v slovenščino"
+          }
         >
           <Globe size={16} />
           <span className="tabular-nums">{locale.toUpperCase()}</span>
@@ -415,7 +438,9 @@ export function Timetable() {
       </div>
 
       {loading && (
-        <div className="mt-4 text-sm text-muted-foreground">{t.common.loadingTimetable}</div>
+        <div className="mt-4 text-sm text-muted-foreground">
+          {t.common.loadingTimetable}
+        </div>
       )}
       {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
 
@@ -481,7 +506,17 @@ export function Timetable() {
 
       {/* Footer disclaimer */}
       <div className="mt-10 pt-4 border-t text-xs text-muted-foreground text-center">
-        {t.common.disclaimerPrefix} {" "}
+        {t.common.disclaimerPrefix}{" "}
+        <a
+          href="https://www.wise-tt.com/wtt_um_feri/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-transparent hover:decoration-inherit"
+        >
+          WISE
+        </a>{" "}
+        {t.common.timetable}{" "}
+        {t.common.disclaimerBy}{" "}
         <a
           href="https://github.com/EdvinBec"
           target="_blank"

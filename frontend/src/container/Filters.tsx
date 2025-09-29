@@ -41,10 +41,12 @@ export function Filters({
           classNameById.get(classId) ??
           events.find((e) => e.classId === classId)?.className ??
           String(classId),
-        groups: Array.from(groupMap.entries()).map(([id, name]) => ({
-          id,
-          name,
-        })),
+        groups: Array.from(groupMap.entries())
+          .filter(([, name]) => name !== "RIT 2")
+          .map(([id, name]) => ({
+            id,
+            name,
+          })),
       });
     }
     return map;

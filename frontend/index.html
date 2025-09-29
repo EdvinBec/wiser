@@ -2,20 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/timetable.png" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>wiseR</title>
+    <title>Urnik - FERI RIT VS 2</title>
   </head>
   <body>
     <script>
       (function () {
         try {
           var saved = localStorage.getItem("themeV1");
-          var isDark = saved === "dark" || (!saved && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          var isDark =
+            saved === "dark" ||
+            (!saved &&
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
           if (isDark) document.documentElement.classList.add("dark");
         } catch (e) {}
       })();

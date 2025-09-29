@@ -32,10 +32,16 @@ export function TimetableEventBlock({
       darkText: "dark:text-orange-200",
     },
     Lab: {
-      bg: "bg-amber-200",
-      text: "text-amber-900",
-      darkBg: "dark:bg-amber-900/30",
-      darkText: "dark:text-amber-200",
+      bg: "bg-sky-200",
+      text: "text-sky-900",
+      darkBg: "dark:bg-sky-900/30",
+      darkText: "dark:text-sky-200",
+    },
+    LabExercise: {
+      bg: "bg-sky-200",
+      text: "text-sky-900",
+      darkBg: "dark:bg-sky-900/30",
+      darkText: "dark:text-sky-200",
     },
     Seminar: {
       bg: "bg-stone-300",

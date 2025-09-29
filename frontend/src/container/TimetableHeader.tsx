@@ -22,19 +22,26 @@ export function TimetableHeader({
   const weekday = selectedDay
     ? new Intl.DateTimeFormat(t.locale, { weekday: "long" }).format(selectedDay)
     : t.header.day;
-  const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-  const heading = selectedView === "day"
-    ? (t.locale.startsWith("sl") ? capitalize(weekday) : weekday)
-    : `${t.header.weekLabel} ${selectedWeek ?? ""}`;
+  const capitalize = (s: string) =>
+    s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const heading =
+    selectedView === "day"
+      ? t.locale.startsWith("sl")
+        ? capitalize(weekday)
+        : weekday
+      : `${t.header.weekLabel} ${selectedWeek ?? ""}`;
 
-  const sub = selectedView === "week"
-    ? new Intl.DateTimeFormat(t.locale).format(
-        (() => {
-          const today = new Date();
-          return today;
-        })()
-      )
-    : (selectedDay ? new Intl.DateTimeFormat(t.locale).format(selectedDay) : "");
+  const sub =
+    selectedView === "week"
+      ? new Intl.DateTimeFormat(t.locale).format(
+          (() => {
+            const today = new Date();
+            return today;
+          })()
+        )
+      : selectedDay
+      ? new Intl.DateTimeFormat(t.locale).format(selectedDay)
+      : "";
 
   const ViewIcon = selectedView === "day" ? Calendar : CalendarRange;
 
@@ -46,8 +53,12 @@ export function TimetableHeader({
           <ViewIcon className="text-muted-foreground" size={18} />
         </div>
         <div className="min-w-0">
-          <h2 className="font-extrabold text-3xl tracking-tight truncate">{heading}</h2>
-          {sub && <p className="text-sm mt-1 text-muted-foreground truncate">{sub}</p>}
+          <h2 className="font-extrabold text-3xl tracking-tight truncate">
+            {heading}
+          </h2>
+          {sub && (
+            <p className="text-sm mt-1 text-muted-foreground truncate">{sub}</p>
+          )}
         </div>
       </div>
 

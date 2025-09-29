@@ -163,20 +163,13 @@ public class ExcelParserService
                                 .Where(p => p.Length > 0)
                                 .ToArray();
 
-                            bool isExercise = sessionType is SessionType.ComputerExercise
-                                or SessionType.LabExercise
-                                or SessionType.SeminarExercise;
-
-                            // For exercises: if there are multiple parts, skip the first (e.g., skip "RIT 2")
-                            var partsToParse = (isExercise && parts.Length > 1) ? parts.Skip(1).ToArray() : parts;
+                            IEnumerable<string> selected = GroupParsing.ExtractGroups(new[] { input });
 
                             List<int> groupIds = new();
-
-                            foreach (var group in GroupParsing.FlattenGroups(partsToParse))
+                            foreach (var g in selected)
                             {
-                                if (string.IsNullOrWhiteSpace(group)) continue;
-                                var groupId = await database.CreateGroupAsync(group.Trim());
-                                groupIds.Add(groupId);
+                                var id = await database.CreateGroupAsync(g);
+                                groupIds.Add(id);
                             }
 
                         // Instructor
