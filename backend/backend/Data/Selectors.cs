@@ -34,7 +34,7 @@ public static class Selectors
         /*{ "BU10", "form\\:j_idt175_1" },
         { "BV10", "form\\:j_idt175_2" },
         { "BU80", "form\\:j_idt175_3" },*/
-        // "BV30", "form\\:j_idt187_4" },
+        { "BV30", "form\\:j_idt187_4" },
         /*{ "BU50", "form\\:j_idt175_5" },
         { "BU20", "form\\:j_idt175_6" },*/
         { "BV20", "form\\:j_idt187_7" },
