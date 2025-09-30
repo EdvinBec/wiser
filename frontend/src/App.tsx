@@ -4,7 +4,7 @@ import { Timetable } from "./container/Timetable";
 function App() {
   return (
     <>
-      <Timetable />
+      <Timetable courseCode={11} headerTitle="FERI RIT VS 2" />
     </>
   );
 }

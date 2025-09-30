@@ -30,6 +30,7 @@ public class ExcelCleanupHelper
         var emptyCols = new List<int>();
         for (int col = 0; col < maxCol; col++)
         {
+            // Count empty cells in column, if there is more than 10, consider it as empty
             int cntr = 0;
             for (int r = fromRowInclusive; r <= lastRow && cntr < 10; r++)
             {

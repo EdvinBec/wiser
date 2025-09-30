@@ -35,7 +35,13 @@ const LS = {
   ay: "timetableSelectedAYV2",
 } as const;
 
-export function Timetable() {
+export function Timetable({
+  courseCode,
+  headerTitle,
+}: {
+  courseCode: number;
+  headerTitle?: string;
+}) {
   const [selectedView, setSelectedView] = useState<"day" | "week">(() => {
     try {
       const raw =
@@ -80,7 +86,8 @@ export function Timetable() {
   );
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem("themeV2") || localStorage.getItem("themeV1");
+      const saved =
+        localStorage.getItem("themeV2") || localStorage.getItem("themeV1");
       if (saved === "dark") return true;
       if (saved === "light") return false;
     } catch {}
@@ -181,7 +188,9 @@ export function Timetable() {
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<number>(
     () => {
       try {
-        const raw = localStorage.getItem(LS.ay) || localStorage.getItem("timetableSelectedAYV1");
+        const raw =
+          localStorage.getItem(LS.ay) ||
+          localStorage.getItem("timetableSelectedAYV1");
         const n = raw ? Number(raw) : NaN;
         if (Number.isFinite(n)) return n;
       } catch {}
@@ -235,6 +244,7 @@ export function Timetable() {
           const data = await fetchWeekTimetable(
             academicYear,
             wk,
+            courseCode,
             controller.signal
           );
           setEvents(data);
@@ -385,7 +395,7 @@ export function Timetable() {
         <div className="flex flex-col md:flex-row md:items-center gap-2">
           <Brand />
           <span className="text-sm text-muted-foreground text-nowrap">
-            FERI RIT VS 2
+            {headerTitle}
           </span>
         </div>
         <div className="flex gap-2 items-center flex-wrap justify-end">

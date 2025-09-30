@@ -8,7 +8,7 @@ public class ExcelFetcherWorker : BackgroundService
     private readonly ExcelParserService _parser;
     private readonly ILogger<ExcelFetcherWorker> _log;
     
-    private static readonly int[] GradesToFetch = { 2 }; 
+    private static readonly int[] GradesToFetch = { 1 }; 
 
     public ExcelFetcherWorker(ExcelFetcherService fetcher, ExcelParserService parser, ILogger<ExcelFetcherWorker> log)
     {
@@ -28,14 +28,15 @@ public class ExcelFetcherWorker : BackgroundService
                 // Iterate all class codes from Selectors.CourseMap
                 foreach (var courseCode in Selectors.CourseMap.Keys)
                 {
-                    foreach (var grade in GradesToFetch)
-                    {
+                    var grade = Selectors.Course2GradeMap[courseCode];
+                   
                         if (stoppingToken.IsCancellationRequested) break;
 
                         try
                         {
                             _log.LogInformation("Fetching course {CourseCode}, grade {Grade}", courseCode, grade);
-                            await _fetcher.DownloadsExcel(courseCode, grade);
+                            string groupName = Selectors.Course2CodeMap[courseCode];
+                            await _fetcher.DownloadsExcel(courseCode, grade, groupName);
                             _log.LogInformation("Done: {CourseCode}-{Grade}", courseCode, grade);
                             
                             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
@@ -45,7 +46,6 @@ public class ExcelFetcherWorker : BackgroundService
                             _log.LogWarning(ex, "Fetch failed for {CourseCode}-{Grade}", courseCode, grade);
                             await Task.Delay(TimeSpan.FromMinutes(3), stoppingToken);
                         }
-                    }
                 }
 
                 _log.LogInformation("Excel fetch sweep complete. Sleeping until next cycle");
