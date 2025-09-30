@@ -65,14 +65,34 @@ export async function fetchDayTimetable(
 export type ClassInfo = { id: number; name: string };
 export type GroupInfo = { id: number; name: string };
 
-export async function fetchClasses(signal?: AbortSignal): Promise<ClassInfo[]> {
-  const res = await fetch(`${API_BASE}/classes`, { signal });
+export async function fetchClasses(
+  courseId: number,
+  signal?: AbortSignal
+): Promise<ClassInfo[]> {
+  const res = await fetch(`${API_BASE}/classes/${courseId}`, { signal });
   if (!res.ok) throw new Error(`Failed classes fetch: ${res.status}`);
   return res.json();
 }
 
-export async function fetchGroups(signal?: AbortSignal): Promise<GroupInfo[]> {
-  const res = await fetch(`${API_BASE}/groups`, { signal });
+export async function fetchGroups(
+  courseId: number,
+  signal?: AbortSignal
+): Promise<GroupInfo[]> {
+  const res = await fetch(`${API_BASE}/groups/${courseId}`, { signal });
   if (!res.ok) throw new Error(`Failed groups fetch: ${res.status}`);
   return res.json();
+}
+
+export async function fetchLatestCheck(
+  courseId: number,
+  signal?: AbortSignal
+): Promise<number | null> {
+  const res = await fetch(`${API_BASE}/latestCheck/${courseId}`, { signal });
+  if (!res.ok) throw new Error(`Failed latest check fetch: ${res.status}`);
+  const data: any = await res.json();
+  // Support both ASP.NET default camelCase and explicit PascalCase keys
+  const raw = data?.latestCheck ?? data?.LatestCheck;
+  if (!raw) return null;
+  const ms = Date.parse(raw);
+  return Number.isNaN(ms) ? null : ms;
 }

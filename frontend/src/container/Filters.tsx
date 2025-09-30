@@ -42,7 +42,10 @@ export function Filters({
           events.find((e) => e.classId === classId)?.className ??
           String(classId),
         groups: Array.from(groupMap.entries())
-          .filter(([, name]) => name !== "RIT 2")
+          .filter(([, name]) => {
+            const n = (name ?? "").trim();
+            return n !== "" && n !== "RIT 2" && n !== "ITK 1";
+          })
           .map(([id, name]) => ({
             id,
             name,

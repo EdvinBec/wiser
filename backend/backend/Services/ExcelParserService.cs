@@ -80,7 +80,7 @@ public class ExcelParserService
                         {
                             throw new ArgumentNullException("Class name cell is missing");
                         }
-                        classId = await database.CreateClassAsync(className);
+                        classId = await database.CreateClassAsync(className, courseId);
                         
                         _log.LogInformation("{CurrentTime} - Class saved to database. Name={ClassName}, Id={ClassId}", DateTime.Now, className, classId);
                         headerMarkersSeen++;
@@ -177,7 +177,7 @@ public class ExcelParserService
                                 
                             foreach (var group in groups)
                             {
-                                var groupId = await database.CreateGroupAsync(group);
+                                var groupId = await database.CreateGroupAsync(group, courseId);
                                 groupIds.Add(groupId);
                             }
 

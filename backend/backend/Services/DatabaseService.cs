@@ -58,11 +58,11 @@ public class DatabaseService
         return existing.Id;
     }
     
-    public async Task<int> CreateGroupAsync(string name)
+    public async Task<int> CreateGroupAsync(string name, int courseId)
     {
         // check if already exists
         var existing = await _context.Groups
-            .FirstOrDefaultAsync(c => c.Name == name);
+            .FirstOrDefaultAsync(c => c.Name == name && c.CourseId == courseId);
 
         if (existing != null)
         {
@@ -73,6 +73,7 @@ public class DatabaseService
         var group = new Group
         {
             Name = name,
+            CourseId = courseId
         };
 
         _context.Groups.Add(group);
@@ -81,10 +82,10 @@ public class DatabaseService
         return group.Id;
     }
 
-    public async Task<int> CreateClassAsync(string name)
+    public async Task<int> CreateClassAsync(string name, int courseId)
     {
         var existing = await _context.Classes
-            .FirstOrDefaultAsync(c => c.Name == name);
+            .FirstOrDefaultAsync(c => c.Name == name && c.CourseId == courseId);
 
         if (existing != null)
         {
@@ -94,6 +95,7 @@ public class DatabaseService
         var clas = new Class
         {
             Name = name,
+            CourseId = courseId
         };
 
         _context.Classes.Add(clas);

@@ -31,7 +31,8 @@ export function OnboardingFiltersModal({
       setSel(initial);
       setQuery("");
       const first = new Set<number>();
-      for (let i = 0; i < Math.min(3, classes.length); i++) first.add(classes[i].id);
+      for (let i = 0; i < Math.min(3, classes.length); i++)
+        first.add(classes[i].id);
       setExpanded(first);
     }
   }, [open, initial, classes]);
@@ -39,7 +40,10 @@ export function OnboardingFiltersModal({
   const groupOptions = useMemo(
     () =>
       groups
-        .filter((g) => g.name !== "RIT 2")
+        .filter((g) => {
+          const n = (g.name ?? "").trim();
+          return n !== "" && n !== "RIT 2" && n !== "ITK 1";
+        })
         .map((g) => ({ id: g.id, name: g.name })),
     [groups]
   );
@@ -104,14 +108,20 @@ export function OnboardingFiltersModal({
           <p className="text-sm text-muted-foreground">
             {t.common.pickGroupsHelper}
           </p>
-          <button className="text-xs text-blue-600 hover:underline" onClick={clearAll}>
+          <button
+            className="text-xs text-blue-600 hover:underline"
+            onClick={clearAll}
+          >
             {t.common.clearAll}
           </button>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -134,11 +144,19 @@ export function OnboardingFiltersModal({
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {isExpanded(c.id) ? (
-                      <ChevronDown size={16} className="text-muted-foreground" />
+                      <ChevronDown
+                        size={16}
+                        className="text-muted-foreground"
+                      />
                     ) : (
-                      <ChevronRight size={16} className="text-muted-foreground" />
+                      <ChevronRight
+                        size={16}
+                        className="text-muted-foreground"
+                      />
                     )}
-                    <span className="text-sm font-medium truncate">{c.name}</span>
+                    <span className="text-sm font-medium truncate">
+                      {c.name}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {count > 0 && (
@@ -202,7 +220,9 @@ export function OnboardingFiltersModal({
             );
           })}
           {filteredClasses.length === 0 && (
-            <div className="text-sm text-muted-foreground">{t.common.noSubjectsMatch}</div>
+            <div className="text-sm text-muted-foreground">
+              {t.common.noSubjectsMatch}
+            </div>
           )}
         </div>
       </div>

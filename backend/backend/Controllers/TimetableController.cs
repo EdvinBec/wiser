@@ -101,20 +101,20 @@ public class TimetableController : ControllerBase
         return Ok(sessions);
     }
     
-    [HttpGet("groups")]
-    public async Task<IActionResult> GetGroups()
+    [HttpGet("groups/{courseId:int}")]
+    public async Task<IActionResult> GetGroups(int courseId)
     {
         var groups = await _database.Groups
-            .ToListAsync();
+            .Where(g => g.CourseId == courseId).ToListAsync();
 
         return Ok(groups);
     }
     
-    [HttpGet("classes")]
-    public async Task<IActionResult> GetClasses()
+    [HttpGet("classes/{courseId:int}")]
+    public async Task<IActionResult> GetClasses(int courseId)
     {
         var classes = await _database.Classes
-            .ToListAsync();
+            .Where(c => c.CourseId == courseId).ToListAsync();
 
         return Ok(classes);
     }

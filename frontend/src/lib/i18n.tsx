@@ -29,6 +29,7 @@ type Dict = {
     switchToDark: string;
     disclaimerPrefix: string;
     timetable: string;
+    latestCheckLabel: string;
   };
   header: {
     showBy: string;
@@ -69,6 +70,7 @@ const dicts: Record<Locale, Dict> = {
       switchToDark: "Switch to dark mode",
       disclaimerPrefix: "This app uses data from the",
       timetable: " timetable and is not affiliated with Wise Technologies.",
+      latestCheckLabel: "Latest check",
     },
     header: {
       showBy: "Show by:",
@@ -118,6 +120,7 @@ const dicts: Record<Locale, Dict> = {
       switchToDark: "Preklopi na temno temo",
       disclaimerPrefix: "Aplikacija uporablja podatke iz",
       timetable: "urnika in ni povezana s podjetjem Wise Technologies.",
+      latestCheckLabel: "Zadnji zajem",
     },
     header: {
       showBy: "Prikaz:",
