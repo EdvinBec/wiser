@@ -19,6 +19,58 @@ type ApiEvent = {
   finishAt: string; // ISO
 };
 
+// Some backends return ISO-like strings without timezone (e.g. 2025-09-30T08:00:00)
+// which JS interprets as UTC. Since we display times in Europe/Ljubljana, that
+// results in a +2h (or +1h in winter) shift. This helper treats such naive
+// strings as Europe/Ljubljana local wall time and returns the correct Date.
+function parseLjubljanaLocalISO(raw: string): Date {
+  // If the string already contains a timezone designator, rely on native parser
+  if (/([zZ]|[+\-]\d{2}:?\d{2})$/.test(raw)) return new Date(raw);
+
+  // Match YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
+  const m = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/
+  );
+  if (!m) return new Date(raw);
+
+  const Y = Number(m[1]);
+  const Mo = Number(m[2]);
+  const D = Number(m[3]);
+  const H = Number(m[4]);
+  const Mi = Number(m[5]);
+  const S = Number(m[6] ?? 0);
+
+  // Start from the same wall time as if it were UTC
+  const utcMs = Date.UTC(Y, Mo - 1, D, H, Mi, S);
+  const probe = new Date(utcMs);
+
+  // Derive GMT offset for Europe/Ljubljana at that moment, e.g. "GMT+2"
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Ljubljana",
+    timeZoneName: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(probe);
+  const tzName = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  const mOff = tzName.match(/GMT([+\-])(\d{1,2})(?::?(\d{2}))?/);
+  let offsetMinutes = 0;
+  if (mOff) {
+    const sign = mOff[1] === "-" ? -1 : 1;
+    const hh = Number(mOff[2] ?? 0);
+    const mm = Number(mOff[3] ?? 0);
+    offsetMinutes = sign * (hh * 60 + mm);
+  }
+
+  // Adjust the UTC timestamp backwards by the Ljubljana offset so that when
+  // formatted in Europe/Ljubljana it shows the original wall time.
+  return new Date(utcMs - offsetMinutes * 60_000);
+}
+
 function mapApiEvent(e: ApiEvent): TimetableEvent {
   return {
     id: String(e.id),
@@ -31,8 +83,8 @@ function mapApiEvent(e: ApiEvent): TimetableEvent {
     type: (e.type as TimetableEventType) ?? "Lecture",
     groupId: Number(e.groupId),
     groupName: e.groupName,
-    startAt: new Date(e.startAt),
-    finishAt: new Date(e.finishAt),
+    startAt: parseLjubljanaLocalISO(e.startAt),
+    finishAt: parseLjubljanaLocalISO(e.finishAt),
   };
 }
 
