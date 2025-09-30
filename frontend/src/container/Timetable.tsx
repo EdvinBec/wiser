@@ -259,6 +259,7 @@ export function Timetable({
             calendarYear,
             month,
             day,
+            courseId,
             controller.signal
           );
           setEvents(data);
