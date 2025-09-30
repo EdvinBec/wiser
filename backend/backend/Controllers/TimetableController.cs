@@ -31,8 +31,8 @@ public class TimetableController : ControllerBase
                 RoomName = s.Room.Code,
                 s.Type,
                 s.GroupId,
-                GroupName = s.Group != null ? s.Group.Name : null,
-                s.StartAt,   // UTC in DB (timestamptz)
+                GroupName = s.Group.Name,
+                s.StartAt,
                 s.FinishAt
             })
             .ToListAsync();
@@ -49,9 +49,8 @@ public class TimetableController : ControllerBase
             Type = r.Type,
             GroupId = r.GroupId,
             GroupName = r.GroupName,
-            // Convert to Ljubljana for the API response
-            StartAt  = DateHelpers.ToLjubljana(r.StartAt),
-            FinishAt = DateHelpers.ToLjubljana(r.FinishAt)
+            StartAt = r.StartAt,
+            FinishAt = r.FinishAt
         }).ToList();
 
         return Ok(sessions);
@@ -77,8 +76,8 @@ public class TimetableController : ControllerBase
                 RoomName = s.Room.Code,
                 s.Type,
                 s.GroupId,
-                GroupName = s.Group != null ? s.Group.Name : null,
-                s.StartAt,   // UTC in DB (timestamptz)
+                GroupName = s.Group.Name,
+                s.StartAt,
                 s.FinishAt
             })
             .ToListAsync();
@@ -95,9 +94,8 @@ public class TimetableController : ControllerBase
             Type = r.Type,
             GroupId = r.GroupId,
             GroupName = r.GroupName,
-            // respond in Ljubljana time (with +01/+02 offset in JSON)
-            StartAt  = DateHelpers.ToLjubljana(r.StartAt),
-            FinishAt = DateHelpers.ToLjubljana(r.FinishAt)
+            StartAt  = r.StartAt.ToLocalTime(),
+            FinishAt = r.FinishAt.ToLocalTime()
         }).ToList();
 
         return Ok(sessions);
@@ -137,5 +135,17 @@ public class TimetableController : ControllerBase
             .ToListAsync();
 
         return Ok(rooms);
+    }
+    
+    [HttpGet("latestCheck/{courseId:int}")]
+    public async Task<IActionResult> GetLatestCheckForCourse(int courseId)
+    {
+        var course = await _database.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+
+        return Ok(new
+        {
+            CourseId = course.Id,
+            LatestCheck = course.LatestCheck.ToLocalTime()
+        });
     }
 }

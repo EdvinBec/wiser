@@ -17,11 +17,11 @@ public class DatabaseService
         _log = log;
     }
 
-    public async Task<int> CreateCourseAsync(string name, int grade)
+    public async Task<int> CreateCourseAsync(string code, int grade, DateTimeOffset now)
     {
         // check if already exists
         var existing = await _context.Courses
-            .FirstOrDefaultAsync(c => c.Name == name && c.Grade == grade);
+            .FirstOrDefaultAsync(c => c.Code == code && c.Grade == grade);
 
         if (existing != null)
         {
@@ -31,14 +31,31 @@ public class DatabaseService
         // create new
         var course = new Course
         {
-            Name = name,
-            Grade = grade
+            Code = code,
+            Grade = grade,
+            LatestCheck = now.ToUniversalTime()
         };
 
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
 
         return course.Id;
+    }
+
+    public async Task<int> UpdateCourseAsync(string code, int grade, DateTimeOffset now)
+    {
+        var existing = await _context.Courses
+            .FirstOrDefaultAsync(c => c.Code == code && c.Grade == grade);
+
+        if (existing == null)
+        {
+            throw new InvalidOperationException($"Course with code {code} and grade {grade} doesn't exist.");
+        }
+        
+        existing.LatestCheck = now.ToUniversalTime();
+        await _context.SaveChangesAsync();
+
+        return existing.Id;
     }
     
     public async Task<int> CreateGroupAsync(string name)

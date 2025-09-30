@@ -1,15 +1,9 @@
-using System.Data;
-using System.Globalization;
-using System.Text.RegularExpressions;
 using backend.Configs;
 using backend.Helpers;
-using backend.Infrastructure.Database;
 using backend.Models;
 using backend.Models.Enums;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace backend.Services;
 
@@ -25,10 +19,20 @@ public class ExcelParserService
         _scopeFactory = scopeFactory;
         _log = log;
         _fetcher.ExcelFileUpdated += OnExcelFileUpdated;
+        _fetcher.ExcelFetched += UpdateLatestCheck;
     }
 
     private async void OnExcelFileUpdated(object? sender, ExcelFetcherService.ExcelDownloadedEventArgs e)
     {
+        List<Session> sessions = new List<Session>();
+        int totalRowsSeen = 0;
+        int headerMarkersSeen = 0;
+        int sessionRowsConsidered = 0;
+        int sessionsParsed = 0;
+        int rowsSkippedUnknownDay = 0;
+        int rowsSkippedNoClass = 0;
+        int rowErrors = 0;
+        
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -37,17 +41,8 @@ public class ExcelParserService
             string path = e.Path;
 
             // Save the course to the database
-            var courseId = await database.CreateCourseAsync(e.CourseCode, e.Grade);
-            _log.LogInformation("Parsing Excel for {Course}-{Grade}. Course id: {CourseId}. Path: {Path}", e.CourseCode, e.Grade, courseId, path);
-
-            var newSessions = new List<Session>();
-            int totalRowsSeen = 0;
-            int headerMarkersSeen = 0;
-            int sessionRowsConsidered = 0;
-            int sessionsParsed = 0;
-            int rowsSkippedUnknownDay = 0;
-            int rowsSkippedNoClass = 0;
-            int rowErrors = 0;
+            var courseId = await database.CreateCourseAsync(e.CourseCode, e.Grade, DateTimeOffset.Now);
+            _log.LogInformation("{CurrentTime} - Parsing Excel for {Course}-{Grade}. CourseId={CourseId}. Path={Path}", DateTime.Now, e.CourseCode, e.Grade, courseId, path);
 
             using (var fStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -55,155 +50,179 @@ public class ExcelParserService
                 HSSFWorkbook workbook = new HSSFWorkbook(fStream);
                 sheet = workbook.GetSheetAt(0);
 
-                var emptyCols =
-                    ExcelCleanupHelper.FindCompletelyEmptyColumns(sheet,
-                        fromRowInclusive: ExcelParserConfig.headerRowNumber);
+                // Remove empty columns
+                var emptyCols = ExcelCleanupHelper.FindCompletelyEmptyColumns(sheet, fromRowInclusive: ExcelParserConfig.headerRowNumber);
                 if (emptyCols.Count > 0)
                 {
                     ExcelCleanupHelper.DeleteColumns(sheet, emptyCols);
                 }
 
-                IRow header = sheet.GetRow(ExcelParserConfig.headerRowNumber);
-                int cellsCount = ExcelParserConfig.cellsCount;
-                _log.LogInformation("Sheet stats: firstRow={FirstRow}, lastRow={LastRow}, headerRow={HeaderRow}", sheet.FirstRowNum, sheet.LastRowNum, ExcelParserConfig.headerRowNumber);
-
-                var globalGroup = "";
-
-                for (int j = ExcelParserConfig.headerRowNumber; j <= sheet.LastRowNum; j++)
-                {
-                    var row = sheet.GetRow(j);
-                    
-                    var type = (row.GetCell(4)?.ToString() ?? string.Empty).Split(' ')[0].Trim();
-                    SessionType sessionType;
-                    if (type == "PR")
-                    {
-                        globalGroup = row.GetCell(5)?.ToString().Trim();
-                        break;
-                    }
-                }
-
-                var className = "";
+                // Go through and parse each row
                 int? classId = null;
-
-                for (int j = ExcelParserConfig.headerRowNumber; j <= sheet.LastRowNum; j++)
+                for (int j = 0; j <= sheet.LastRowNum; j++)
                 {
                     var row = sheet.GetRow(j);
                     totalRowsSeen++;
+                    
                     if (row == null)
                     {
                         continue;
                     }
+                    
                     var dayCell = row.GetCell(0);
-                    var dayCellStr = dayCell?.ToString();
-
-                    // This will firstly save the class name
-                    if (dayCellStr == "Dan")
+                    
+                    // Find and save the class name
+                    if (dayCell.ToString() == "Dan")
                     {
-                        var previousRow = sheet.GetRow(j - 1);
-                        className = previousRow?.GetCell(0)?.ToString()?.Trim() ?? string.Empty;
-                        headerMarkersSeen++;
-                        _log.LogInformation("[{Row}] Found class header. ClassName='{ClassName}'", j, className);
-
+                        var classNameRow = sheet.GetRow(j - 1);
+                        var className = classNameRow.GetCell(0)?.ToString()?.Trim();
+                        if (className == null)
+                        {
+                            throw new ArgumentNullException("Class name cell is missing");
+                        }
                         classId = await database.CreateClassAsync(className);
-                        _log.LogInformation("Class ensured. Name='{ClassName}', Id={ClassId}", className, classId);
+                        
+                        _log.LogInformation("{CurrentTime} - Class saved to database. Name={ClassName}, Id={ClassId}", DateTime.Now, className, classId);
+                        headerMarkersSeen++;
                         continue;
                     }
 
-                    if (ExcelParserConfig.daysInWeek.Contains(dayCellStr) && !String.IsNullOrEmpty(className))
+                    if (ExcelParserConfig.daysInWeek.Contains(dayCell.ToString()!) && classId != null)
                     {
                         sessionRowsConsidered++;
-                        var day = dayCellStr;
 
-                        // Get start and finish time
                         try
                         {
-                            var date = row.GetCell(1)?.ToString()?.TrimStart().Trim();
-                            var timesStr = row.GetCell(2)?.ToString();
-                            var times = timesStr?.Split('-') ?? Array.Empty<string>();
-                            if (times.Length < 2)
-                                throw new FormatException($"Invalid time range: '{timesStr}'");
-                            var startAt = DateHelpers.ParseLocalToUtc(date, times[0], ExcelParserConfig.dateFormat);
-                            var finishAt = DateHelpers.ParseLocalToUtc(date, times[1], ExcelParserConfig.dateFormat);
+                            // Raw cell data
+                            dayCell = row.GetCell(0);
+                            var dateCell = row.GetCell(1);
+                            var timeCell = row.GetCell(2);
+                            var roomCell = row.GetCell(3);
+                            var typeCell = row.GetCell(4);
+                            var groupCell = row.GetCell(5);
+                            var instructorCell = row.GetCell(6);
+                            
+                            // Parsed data
+                            var day = dayCell.ToString()?.Trim();
+                            
+                            var dateString = dateCell.ToString()?.Trim();
+                            if (dateString == null)
+                            {
+                                throw new ArgumentNullException("Date cell is missing");
+                            }
+                            var startTimeString = timeCell.ToString()?.Split('-')[0].Trim();
+                            var finishTimeString = timeCell.ToString()?.Split('-')[1].Trim();
+                            if (startTimeString == null || finishTimeString == null)
+                            {
+                                throw new FormatException($"Invalid time range {dateString}");
+                            }
+                            var startDateTimeOffset = DateHelpers.ConstructDateTimeFromString(dateString!, startTimeString!);
+                            var finishDateTimeOffset = DateHelpers.ConstructDateTimeFromString(dateString!, finishTimeString!);
 
-                        // Room
-                            var room = row.GetCell(3)?.ToString()?.Trim() ?? string.Empty;
+                            var room = roomCell.ToString()?.Trim();
+                            if (room == null)
+                            {
+                                throw new ArgumentNullException("Room cell is missing");
+                            }
                             var roomId = await database.CreateRoomAsync(room);
 
-                        // Session type
-                            var type = (row.GetCell(4)?.ToString() ?? string.Empty).Split(' ')[0].Trim();
-                            SessionType sessionType;
-                            if (type == "PR")
+                            SessionType type;
+                            var typeString = typeCell.ToString()?.Trim();
+                            if (typeString == null)
                             {
-                                sessionType = SessionType.Lecture;
+                                throw new ArgumentNullException("Type cell is missing");
                             }
-                            else if (type == "RV")
+                            switch (typeString)
                             {
-                                sessionType = SessionType.ComputerExercise;
-                            }
-                            else if (type == "LV")
-                            {
-                                sessionType = SessionType.LabExercise;
-                            }
-                            else if (type == "SV")
-                            {
-                                sessionType = SessionType.SeminarExercise;
-                            }
-                            else
-                            {
-                                sessionType = SessionType.Other;
-                            }
-
-                        // Extract group from string
-                            var groups = row.GetCell(5)?.ToString() ?? string.Empty;
-                            var input = ExcelParserConfig.NormalizeSpaces(groups);
-                            var prefix = globalGroup;
-                            
-                            var parts = Regex.Split(input ?? string.Empty, @"\s*VS\s*", RegexOptions.IgnoreCase)
-                                .Select(p => p.Trim())
-                                .Where(p => p.Length > 0)
-                                .ToArray();
-
-                            IEnumerable<string> selected = GroupParsing.ExtractGroups(new[] { input });
-
-                            List<int> groupIds = new();
-                            foreach (var g in selected)
-                            {
-                                var id = await database.CreateGroupAsync(g);
-                                groupIds.Add(id);
+                                case "PR":
+                                    type = SessionType.Lecture;
+                                    break;
+                                case "RV":
+                                    type = SessionType.ComputerExercise;
+                                    break;
+                                case "SV":
+                                    type = SessionType.SeminarExercise;
+                                    break;
+                                case "LV":
+                                    type = SessionType.LabExercise;
+                                    break;
+                                default:
+                                    type = SessionType.Other;
+                                    break;
                             }
 
-                        // Instructor
-                            var instructor = row.GetCell(6)?.ToString() ?? string.Empty;
-                            var instructorId = await database.CreateInstructorAsync(instructor);
-
-                            if (courseId != null && classId != null)
+                            List<int> groupIds = new List<int>();
+                            List<string> groups = new List<string>();
+                            var groupsString = groupCell.ToString()?.Trim();
+                            if (groupsString == null)
                             {
-                                foreach (var groupId in groupIds)
+                                throw new ArgumentNullException("Groups cell is missing");
+                            }
+                            // First check if there are multiple groups
+                            var groupParts = groupsString.Split(',');
+                            foreach (var part in groupParts)
+                            {
+                                var partString = part.Trim();
+                                var partSplit = partString.Split("VS");
+                                if (partSplit[0].Trim() == e.GroupName)
                                 {
-                                    newSessions.Add(new Session
+                                    if (type == SessionType.Lecture)
                                     {
-                                        CourseId = courseId,
-                                        ClassId = classId.Value,
-                                        InstructorId = instructorId,
-                                        RoomId = roomId,
-                                        StartAt = startAt,
-                                        FinishAt = finishAt,
-                                        Type = sessionType,
-                                        GroupId = groupId
-                                    });
-                                    sessionsParsed++;
+                                        groups.Add(partSplit[0].Trim());
+                                        continue;
+                                    }
+                                    groups.Add(partSplit[1].Trim());
                                 }
+                            }
+                                
+                            foreach (var group in groups)
+                            {
+                                var groupId = await database.CreateGroupAsync(group);
+                                groupIds.Add(groupId);
+                            }
+
+                            var instructorString = instructorCell.ToString()?.Trim();
+                            if (instructorString == null)
+                            {
+                                throw new ArgumentNullException("Instructor cell is missing");
+                            }
+                            var instructorId = await database.CreateInstructorAsync(instructorString);
+
+                            if (courseId == null)
+                            {
+                                throw new InvalidOperationException("CourseId is missing");
+                            }
+                            
+                            if (classId == null)
+                            {
+                                throw new InvalidOperationException("ClassId is missing");
+                            }
+                            
+                            foreach (var groupId in groupIds)
+                            {
+                                sessions.Add(new Session
+                                {
+                                    CourseId = courseId,
+                                    ClassId = (int)classId,
+                                    InstructorId = instructorId,
+                                    RoomId = roomId,
+                                    StartAt = startDateTimeOffset.ToUniversalTime(),
+                                    FinishAt = finishDateTimeOffset.ToUniversalTime(),
+                                    Type = type,
+                                    GroupId = groupId
+                                });
+                                sessionsParsed++;
                             }
                         }
                         catch (Exception ex)
                         {
                             rowErrors++;
-                            _log.LogWarning(ex, "[{Row}] Failed to parse session row. Day='{Day}', Class='{ClassName}'", j, day, className);
+                            _log.LogWarning(ex, "{CurrentTime} - Failed to parse session row {RowIndex}", DateTime.Now, j);
                         }
                     }
                     else
                     {
-                        if (string.IsNullOrEmpty(className)) rowsSkippedNoClass++;
+                        if (classId == null) rowsSkippedNoClass++;
                         else rowsSkippedUnknownDay++;
                     }
                 }
@@ -212,19 +231,27 @@ public class ExcelParserService
             await database.ExecuteInTransactionAsync(async () =>
             {
                 await database.DeleteSessionsByCourseAsync(courseId);
-                await database.AddSessions(newSessions);
+                await database.AddSessions(sessions);
 
                 await database.SaveContext();
             });
 
             _log.LogInformation(
-                "Parse summary for {Course}-{Grade}: totalRows={Total}, headers={Headers}, considered={Considered}, parsedSessions={Parsed}, skippedNoClass={NoClass}, skippedUnknownDay={UnknownDay}, rowErrors={RowErrors}",
-                e.CourseCode, e.Grade, totalRowsSeen, headerMarkersSeen, sessionRowsConsidered, sessionsParsed, rowsSkippedNoClass, rowsSkippedUnknownDay, rowErrors);
+                "{CurrentTime} - Parse summary for {Course}-{Grade}: totalRows={Total}, headers={Headers}, considered={Considered}, parsedSessions={Parsed}, skippedNoClass={NoClass}, skippedUnknownDay={UnknownDay}, rowErrors={RowErrors}",
+                DateTime.Now, e.CourseCode, e.Grade, totalRowsSeen, headerMarkersSeen, sessionRowsConsidered, sessionsParsed, rowsSkippedNoClass, rowsSkippedUnknownDay, rowErrors);
         }
         catch (Exception exception)
         {
-            _log.LogError(exception, "Parser failed for {Course}-{Grade}", e.CourseCode, e.Grade);
+            _log.LogError(exception, "{CurrentTime} - Parser failed for {Course}-{Grade}", DateTime.Now, e.CourseCode, e.Grade);
             throw;
         }
+    }
+
+    private async void UpdateLatestCheck(object? sender, ExcelFetcherService.ExcelFetchedEventArgs e)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<DatabaseService>();
+
+        await database.UpdateCourseAsync(e.CourseCode, e.Grade, e.LatestCheck);
     }
 }

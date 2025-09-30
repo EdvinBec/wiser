@@ -39,9 +39,10 @@ function mapApiEvent(e: ApiEvent): TimetableEvent {
 export async function fetchWeekTimetable(
   academicYear: number,
   weekNumber: number,
+  courseCode: number,
   signal?: AbortSignal
 ): Promise<TimetableEvent[]> {
-  const url = `${API_BASE}/${academicYear}/${weekNumber}/${COURSE_CODE}`;
+  const url = `${API_BASE}/${academicYear}/${weekNumber}/${courseCode}`;
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Failed week fetch: ${res.status}`);
   const data: ApiEvent[] = await res.json();

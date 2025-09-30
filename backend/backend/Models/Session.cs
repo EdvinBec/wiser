@@ -17,8 +17,8 @@ public class Session
     public Class Class { get; set; }
     public Instructor Instructor { get; set; }
     public Room Room { get; set; }
-    public DateTime StartAt { get; set; }
-    public DateTime FinishAt { get; set; }
+    public DateTimeOffset StartAt { get; set; }
+    public DateTimeOffset FinishAt { get; set; }
     public SessionType Type { get; set; }
     public Group? Group { get; set; }
 }

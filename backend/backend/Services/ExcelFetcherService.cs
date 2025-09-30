@@ -8,6 +8,7 @@ namespace backend.Services;
 public class ExcelFetcherService : IAsyncLifetime
 {
     public EventHandler<ExcelDownloadedEventArgs>? ExcelFileUpdated;
+    public EventHandler<ExcelFetchedEventArgs>? ExcelFetched;
     
     private IPlaywright _playwright = null;
     private IBrowser _browser = null;
@@ -34,7 +35,7 @@ public class ExcelFetcherService : IAsyncLifetime
         _playwright.Dispose();
     }
 
-    public async Task DownloadsExcel(string courseCode, int grade)
+    public async Task DownloadsExcel(string courseCode, int grade, string groupName)
     {
         await InitializeAsync();
         var downloadPath = Environment.GetEnvironmentVariable("DOWNLOAD_PATH")
@@ -87,6 +88,7 @@ public class ExcelFetcherService : IAsyncLifetime
                 if (same)
                 {
                     File.Delete(tempPath);
+                    ExcelFetched?.Invoke(this, new ExcelFetchedEventArgs(DateTimeOffset.Now, courseCode, grade));
                     return;
                 }
 
@@ -100,7 +102,7 @@ public class ExcelFetcherService : IAsyncLifetime
                 File.Move(tempPath, finalPath);
             }
 
-            ExcelFileUpdated?.Invoke(this, new ExcelDownloadedEventArgs(finalPath, courseCode, grade));
+            ExcelFileUpdated?.Invoke(this, new ExcelDownloadedEventArgs(finalPath, courseCode, grade, groupName));
         }
         finally
         {
@@ -156,5 +158,6 @@ public class ExcelFetcherService : IAsyncLifetime
         await item.WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await item.ClickAsync();
     }
-    public sealed record ExcelDownloadedEventArgs(string Path, string CourseCode, int Grade);
+    public sealed record ExcelDownloadedEventArgs(string Path, string CourseCode, int Grade, string GroupName);
+    public sealed record ExcelFetchedEventArgs(DateTimeOffset LatestCheck, string CourseCode, int Grade);
 }
