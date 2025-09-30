@@ -19,6 +19,7 @@ import {
   fetchGroups,
   type ClassInfo,
   type GroupInfo,
+  fetchLatestCheck,
 } from "@/lib/api";
 import { OnboardingFiltersModal } from "./OnboardingFiltersModal";
 import { useNow } from "@/lib/useNow";
@@ -36,10 +37,10 @@ const LS = {
 } as const;
 
 export function Timetable({
-  courseCode,
+  courseId,
   headerTitle,
 }: {
-  courseCode: number;
+  courseId: number;
   headerTitle?: string;
 }) {
   const [selectedView, setSelectedView] = useState<"day" | "week">(() => {
@@ -81,6 +82,7 @@ export function Timetable({
   const [error, setError] = useState<string | null>(null);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
+  const [latestCheck, setLatestCheck] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(
     null
   );
@@ -244,7 +246,7 @@ export function Timetable({
           const data = await fetchWeekTimetable(
             academicYear,
             wk,
-            courseCode,
+            courseId,
             controller.signal
           );
           setEvents(data);
@@ -285,12 +287,14 @@ export function Timetable({
     const controller = new AbortController();
     (async () => {
       try {
-        const [cs, gs] = await Promise.all([
-          fetchClasses(controller.signal),
-          fetchGroups(controller.signal),
+        const [cs, gs, lc] = await Promise.all([
+          fetchClasses(courseId, controller.signal),
+          fetchGroups(courseId, controller.signal),
+          fetchLatestCheck(courseId, controller.signal),
         ]);
         setClasses(cs);
         setGroups(gs);
+        setLatestCheck(lc);
         // If no saved filters, open the onboarding modal once data is ready
         const hasSaved = (() => {
           try {
@@ -371,8 +375,10 @@ export function Timetable({
   const filteredByGroup = useMemo(() => {
     if (!events.length) return events;
     return events.filter((ev) => {
-      // Always include events for group "RIT 2"
-      if (ev.groupName === "RIT 2") return true;
+      // Always include all Lectures (not affected by filters)
+      if (ev.type === "Lecture") return true;
+      // Always include events for groups "RIT 2" and "ITK 1"
+      if (ev.groupName === "RIT 2" || ev.groupName === "ITK 1") return true;
       const selected = groupFilter[ev.classId];
       if (!selected || selected.length === 0) return true;
       const selectedSet = new Set(selected.map((v) => Number(v)));
@@ -422,6 +428,20 @@ export function Timetable({
 
       {/* Filters */}
       <div className="mt-2 flex items-center justify-start md:justify-end gap-2">
+        <span>
+          {latestCheck != null && (
+            <span className="text-xs text-muted-foreground">
+              {t.common.latestCheckLabel}: {new Intl.DateTimeFormat(t.locale, {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              }).format(new Date(latestCheck))}
+            </span>
+          )}
+        </span>
         <button
           onClick={() => setIsDark((v) => !v)}
           className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm ${
