@@ -4,7 +4,7 @@ import { Timetable } from "./Timetable";
 function AppItk() {
   return (
     <>
-      <Timetable courseId={1} headerTitle="FERI ITK VS 1" />
+      <Timetable courseId={10} headerTitle="FERI ITK VS 1" />
     </>
   );
 }
