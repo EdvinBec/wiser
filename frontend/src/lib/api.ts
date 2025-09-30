@@ -19,17 +19,23 @@ type ApiEvent = {
   finishAt: string; // ISO
 };
 
-// Some backends return ISO-like strings without timezone (e.g. 2025-09-30T08:00:00)
-// which JS interprets as UTC. Since we display times in Europe/Ljubljana, that
-// results in a +2h (or +1h in winter) shift. This helper treats such naive
-// strings as Europe/Ljubljana local wall time and returns the correct Date.
+// Prefer displaying exactly the hour stored in DB for Europe/Ljubljana.
+// Heuristic: if the timestamp has a real non-zero offset (e.g. +02:00), honor it.
+// If it has Z/+00:00 (common mislabeling when DB stores local wall time), ignore
+// the offset and interpret as Europe/Ljubljana wall time.
 function parseLjubljanaLocalISO(raw: string): Date {
-  // If the string already contains a timezone designator, rely on native parser
-  if (/([zZ]|[+\-]\d{2}:?\d{2})$/.test(raw)) return new Date(raw);
+  // If there is a timezone designator and it's a non-zero offset, trust it
+  const tzMatch = raw.match(/(Z|[+\-]\d{2}:?\d{2})$/i);
+  if (tzMatch) {
+    const tz = tzMatch[1].toUpperCase();
+    const isZeroOffset =
+      tz === "Z" || tz === "+00:00" || tz === "+0000" || tz === "-00:00" || tz === "-0000";
+    if (!isZeroOffset) return new Date(raw);
+  }
 
-  // Match YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
+  // Extract Y-M-D H:m[:s] ignoring fractional seconds and any (possibly zero) TZ suffix
   const m = raw.match(
-    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+\-]\d{2}:?\d{2})?$/i
   );
   if (!m) return new Date(raw);
 
