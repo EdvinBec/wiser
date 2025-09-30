@@ -53,9 +53,10 @@ export async function fetchDayTimetable(
   academicYear: number,
   month: number, // 1-12
   day: number, // 1-31
+  courseCode: number,
   signal?: AbortSignal
 ): Promise<TimetableEvent[]> {
-  const url = `${API_BASE}/day/${academicYear}/${month}/${day}/${COURSE_CODE}`;
+  const url = `${API_BASE}/day/${academicYear}/${month}/${day}/${courseCode}`;
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Failed day fetch: ${res.status}`);
   const data: ApiEvent[] = await res.json();
