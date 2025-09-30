@@ -166,7 +166,7 @@ public class ExcelParserService
                                 var partSplit = partString.Split("VS");
                                 if (partSplit[0].Trim() == e.GroupName)
                                 {
-                                    if (type == SessionType.Lecture)
+                                    if (type == SessionType.Lecture || type == SessionType.SeminarExercise)
                                     {
                                         groups.Add(partSplit[0].Trim());
                                         continue;
