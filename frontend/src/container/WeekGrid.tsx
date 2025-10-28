@@ -111,7 +111,9 @@ export function WeekGrid({
         </div>
 
         {/* scrollable week view with better mobile support */}
-        <div className="flex-1 overflow-x-auto overflow-y-visible md:overflow-x-visible [overscroll-behavior-x:contain] [touch-action:pan-y_pan-x_pinch-zoom]">
+        {/* Enable horizontal pan, disable vertical overflow so page handles vertical drags */}
+        {/* Allow vertical gestures to bubble to page (pan-y) while keeping grid non-scrollable vertically */}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden md:overflow-x-visible [overscroll-behavior-x:contain] [touch-action:pan-x_pan-y_pinch-zoom]">
           <div className="min-w-max md:min-w-0">
             {/* day headers - compact on mobile */}
             <div className="flex text-xs md:text-sm text-muted-foreground select-none">
