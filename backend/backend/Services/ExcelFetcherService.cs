@@ -48,7 +48,7 @@ public class ExcelFetcherService : IAsyncLifetime
 
         if (_browser == null)
         {
-            _browser = await _playwright.Chromium.LaunchAsync(new() { Headless = false, SlowMo = 250});
+            _browser = await _playwright.Chromium.LaunchAsync(new() { Headless = true, SlowMo = 250});
         }
     }
 
