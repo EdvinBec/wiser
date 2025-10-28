@@ -44,7 +44,7 @@ export function Filters({
         groups: Array.from(groupMap.entries())
           .filter(([, name]) => {
             const n = (name ?? "").trim();
-            return n !== "" && n !== "RIT 2" && n !== "ITK 1";
+            return n !== "" && n !== "RIT 2";
           })
           .map(([id, name]) => ({
             id,

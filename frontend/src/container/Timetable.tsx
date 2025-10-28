@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,15 +12,6 @@ import { Brand } from "@/components/Brand";
 import { TimetableHeader } from "./TimetableHeader.tsx";
 import { TimeAxis } from "./TimeAxis.tsx";
 import { WeekGrid } from "./WeekGrid";
-import {
-  fetchDayTimetable,
-  fetchWeekTimetable,
-  fetchClasses,
-  fetchGroups,
-  type ClassInfo,
-  type GroupInfo,
-  fetchLatestCheck,
-} from "@/lib/api";
 import { OnboardingFiltersModal } from "./OnboardingFiltersModal";
 import { useNow } from "@/lib/useNow";
 import type { TimetableEvent } from "@/types/TimetableEvent.ts";
@@ -28,13 +19,14 @@ import { ScheduleColumn } from "./ScheduleColumn.tsx";
 import { TimetableEventBlockDetails } from "./TimetableEventBlockDetailModal.tsx";
 import { useI18n } from "@/lib/i18n";
 import { EventTypeIndicator } from "@/components/EventTypeIndicator.tsx";
-
-const LS = {
-  view: "timetableSelectedViewV2",
-  day: "timetableSelectedDayV2",
-  week: "timetableSelectedWeekV2",
-  ay: "timetableSelectedAYV2",
-} as const;
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { weeksInAcademicYear } from "@/utils/academicCalendar";
+import { useTimetableNavigation } from "@/hooks/useTimetableNavigation";
+import { useAcademicCalendar } from "@/hooks/useAcademicCalendar";
+import { useTimetableData } from "@/hooks/useTimetableData";
+import { useTimetableFilters } from "@/hooks/useTimetableFilters";
+import { useWinterQuirks } from "@/hooks/useWinterQuirks";
+import { toast } from "sonner";
 
 export function Timetable({
   courseId,
@@ -43,82 +35,58 @@ export function Timetable({
   courseId: number;
   headerTitle?: string;
 }) {
-  const [selectedView, setSelectedView] = useState<"day" | "week">(() => {
-    try {
-      const raw =
-        localStorage.getItem(LS.view) ||
-        localStorage.getItem("timetableSelectedViewV1");
-      if (raw === "day" || raw === "week") return raw;
-    } catch {}
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(min-width: 768px)").matches
-    ) {
-      return "week"; // default for larger screens
-    }
-    return "day"; // default for mobile
+  // Navigation state (view, day, week selection)
+  const {
+    selectedView,
+    setSelectedView,
+    selectedDay,
+    setSelectedDay,
+    selectedWeek,
+    setSelectedWeek,
+  } = useTimetableNavigation();
+
+  // Academic calendar state
+  const { selectedAcademicYear, setSelectedAcademicYear, academicYear } =
+    useAcademicCalendar({
+      selectedView,
+      selectedDay,
+    });
+
+  // Data fetching
+  const { events, loading, error, classes, groups, latestCheck } =
+    useTimetableData({
+      selectedView,
+      selectedDay,
+      selectedWeek,
+      academicYear,
+      courseId,
+    });
+
+  // Filtering
+  const {
+    groupFilter,
+    setGroupFilter,
+    filteredEvents,
+    showFilterModal,
+    setShowFilterModal,
+    hasInitialFilters,
+  } = useTimetableFilters(events);
+
+  // Theme and i18n
+  const [isDark, setIsDark] = useLocalStorageState<boolean>("themeV2", false, {
+    legacyKeys: ["themeV1"],
+    serialize: (v) => (v ? "dark" : "light"),
+    deserialize: (s) => s === "dark",
   });
-  const [selectedDay, setSelectedDay] = useState<Date | null>(() => {
-    try {
-      const raw =
-        localStorage.getItem(LS.day) ||
-        localStorage.getItem("timetableSelectedDayV1");
-      if (raw) return new Date(raw);
-    } catch {}
-    return new Date();
-  });
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(() => {
-    try {
-      const raw =
-        localStorage.getItem(LS.week) ||
-        localStorage.getItem("timetableSelectedWeekV1");
-      const n = raw ? Number(raw) : NaN;
-      if (Number.isFinite(n) && n > 0) return n;
-    } catch {}
-    return null;
-  });
-  const [events, setEvents] = useState<TimetableEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [groups, setGroups] = useState<GroupInfo[]>([]);
-  const [latestCheck, setLatestCheck] = useState<number | null>(null);
+  const { t, locale, setLocale } = useI18n();
+
+  // Selected event for detail modal
   const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(
     null
   );
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    try {
-      const saved =
-        localStorage.getItem("themeV2") || localStorage.getItem("themeV1");
-      if (saved === "dark") return true;
-      if (saved === "light") return false;
-    } catch {}
-    // Default to light theme when no preference is saved
-    return false;
-  });
-  const [groupFilter, setGroupFilter] = useState<Record<number, number[]>>(
-    () => {
-      try {
-        const raw = localStorage.getItem("timetableGroupFilterV2");
-        if (!raw) return {};
-        const parsed = JSON.parse(raw) as Record<string, unknown>;
-        const normalized: Record<number, number[]> = {};
-        for (const [k, v] of Object.entries(parsed)) {
-          if (Array.isArray(v)) {
-            const nums = v
-              .map((x) => Number(x))
-              .filter((n) => Number.isFinite(n));
-            normalized[Number(k)] = nums;
-          }
-        }
-        return normalized;
-      } catch {
-        return {};
-      }
-    }
-  );
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const { t, locale, setLocale } = useI18n();
+
+  // Winter quirks (scrolling tree, Friday snowflake cursor)
+  useWinterQuirks();
 
   // layout constants
   const HOUR_HEIGHT = 64; // px per hour
@@ -153,167 +121,28 @@ export function Timetable({
       hour12: false,
     }).format(now);
 
-  // helpers for academic weeks (week 1 = week containing Oct 1)
-  function toMonday(d: Date) {
-    const day = d.getDay();
-    const diff = (day + 6) % 7; // 0 for Mon
-    const m = new Date(d);
-    m.setDate(d.getDate() - diff);
-    m.setHours(0, 0, 0, 0);
-    return m;
-  }
-  function academicYearForDate(d: Date) {
-    // Oct (9) to Dec => same year; Jan–Sep => previous year
-    return d.getMonth() >= 9 ? d.getFullYear() : d.getFullYear() - 1;
-  }
-  function academicWeek1Monday(ay: number) {
-    const oct1 = new Date(ay, 9, 1);
-    return toMonday(oct1);
-  }
-  function getAcademicWeekNumber(d: Date) {
-    const ay = academicYearForDate(d);
-    const w1 = academicWeek1Monday(ay);
-    const cur = toMonday(d);
-    const diffDays = Math.floor((cur.getTime() - w1.getTime()) / 86400000);
-    return Math.floor(diffDays / 7) + 1;
-  }
-  function weeksInAcademicYear(ay: number) {
-    const w1 = academicWeek1Monday(ay);
-    const nextW1 = academicWeek1Monday(ay + 1);
-    const diffDays = Math.floor((nextW1.getTime() - w1.getTime()) / 86400000);
-    return Math.round(diffDays / 7);
-  }
-
-  // academic week/year state
-  const today = new Date();
-  const initialAcademicYear = academicYearForDate(selectedDay ?? today);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<number>(
-    () => {
-      try {
-        const raw =
-          localStorage.getItem(LS.ay) ||
-          localStorage.getItem("timetableSelectedAYV1");
-        const n = raw ? Number(raw) : NaN;
-        if (Number.isFinite(n)) return n;
-      } catch {}
-      return initialAcademicYear;
+  // Open onboarding modal if no filters are saved
+  useEffect(() => {
+    if (classes.length > 0 && !hasInitialFilters) {
+      setShowFilterModal(true);
     }
-  );
+  }, [classes, hasInitialFilters, setShowFilterModal]);
 
+  // Check if data is stale (last check was more than 30 minutes ago)
   useEffect(() => {
-    // initialize week from selectedDay on first mount
-    if (selectedWeek == null && selectedDay) {
-      setSelectedAcademicYear(academicYearForDate(selectedDay));
-      setSelectedWeek(getAcademicWeekNumber(selectedDay));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // persist view/day/week/AY to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS.view, selectedView);
-    } catch {}
-  }, [selectedView]);
-  useEffect(() => {
-    try {
-      if (selectedDay) localStorage.setItem(LS.day, selectedDay.toISOString());
-    } catch {}
-  }, [selectedDay]);
-  useEffect(() => {
-    try {
-      if (selectedWeek != null)
-        localStorage.setItem(LS.week, String(selectedWeek));
-      localStorage.setItem(LS.ay, String(selectedAcademicYear));
-    } catch {}
-  }, [selectedWeek, selectedAcademicYear]);
-
-  const academicYear = useMemo(() => {
-    if (selectedView === "week") return selectedAcademicYear;
-    const d = selectedDay ?? new Date();
-    return academicYearForDate(d);
-  }, [selectedView, selectedAcademicYear, selectedDay]);
-
-  // Load data from API whenever the selection changes
-  useEffect(() => {
-    const controller = new AbortController();
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        if (selectedView === "week") {
-          const wk = selectedWeek ?? getAcademicWeekNumber(new Date());
-          const data = await fetchWeekTimetable(
-            academicYear,
-            wk,
-            courseId,
-            controller.signal
-          );
-          setEvents(data);
-        } else if (selectedView === "day" && selectedDay) {
-          const month = selectedDay.getMonth() + 1;
-          const day = selectedDay.getDate();
-          // For day view, backend expects calendar year, not academic year
-          const calendarYear = selectedDay.getFullYear();
-          const data = await fetchDayTimetable(
-            calendarYear,
-            month,
-            day,
-            courseId,
-            controller.signal
-          );
-          setEvents(data);
-        } else {
-          setEvents([]);
-        }
-      } catch (e: any) {
-        // Ignore abort errors triggered by effect cleanup
-        const isAbort =
-          e?.name === "AbortError" || e?.message?.includes("aborted");
-        if (!isAbort) {
-          setError(e?.message ?? "Failed to load timetable");
-          setEvents([]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-    return () => controller.abort();
-  }, [selectedView, selectedDay, selectedWeek, academicYear]);
-
-  // Load classes and groups once
-  useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const [cs, gs, lc] = await Promise.all([
-          fetchClasses(courseId, controller.signal),
-          fetchGroups(courseId, controller.signal),
-          fetchLatestCheck(courseId, controller.signal),
-        ]);
-        setClasses(cs);
-        setGroups(gs);
-        setLatestCheck(lc);
-        // If no saved filters, open the onboarding modal once data is ready
-        const hasSaved = (() => {
-          try {
-            const raw = localStorage.getItem("timetableGroupFilterV2");
-            if (!raw) return false;
-            const obj = JSON.parse(raw);
-            return obj && Object.keys(obj).length > 0;
-          } catch {
-            return false;
+    if (latestCheck != null) {
+      const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000; // 30 minutes
+      if (latestCheck < thirtyMinutesAgo) {
+        toast.error(
+          t.common.staleDataWarning ||
+            "Data might not be up to date. Last update was more than 30 minutes ago.",
+          {
+            duration: Infinity, // Stays until manually dismissed
           }
-        })();
-        if (!hasSaved) setShowFilterModal(true);
-      } catch (e) {
-        // ignore for now; filters will just show nothing
+        );
       }
-    })();
-    return () => controller.abort();
-  }, []);
+    }
+  }, [latestCheck, t.common.staleDataWarning]);
 
   // Apply theme to <html> element and persist
   useEffect(() => {
@@ -373,31 +202,18 @@ export function Timetable({
     }
   };
 
-  const filteredByGroup = useMemo(() => {
-    if (!events.length) return events;
-    return events.filter((ev) => {
-      // Always include all Lectures (not affected by filters)
-      if (ev.type === "Lecture") return true;
-      // Always include events for groups "RIT 2" and "ITK 1"
-      if (ev.groupName === "RIT 2" || ev.groupName === "ITK 1") return true;
-      const selected = groupFilter[ev.classId];
-      if (!selected || selected.length === 0) return true;
-      const selectedSet = new Set(selected.map((v) => Number(v)));
-      return selectedSet.has(Number(ev.groupId));
-    });
-  }, [events, groupFilter]);
-
+  // For day view, further filter to only show events on the selected day
   const filteredDayEvents = selectedDay
-    ? filteredByGroup.filter(
+    ? filteredEvents.filter(
         (ev) =>
           ev.startAt.getFullYear() === selectedDay.getFullYear() &&
           ev.startAt.getMonth() === selectedDay.getMonth() &&
           ev.startAt.getDate() === selectedDay.getDate()
       )
-    : filteredByGroup;
+    : filteredEvents;
 
   return (
-    <div className="px-6 md:px-10 lg:px-16 py-6 md:py-8 max-w-7xl mx-auto overflow-x-hidden">
+    <div className="px-6 md:px-10 lg:px-16 py-6 md:py-8 max-w-7xl mx-auto overflow-x-hidden md:overflow-x-visible">
       <div className="mb-2 gap-4 flex items-center justify-between border-b pb-4">
         <div className="flex flex-col md:flex-row md:items-center gap-2">
           <Brand />
@@ -427,53 +243,59 @@ export function Timetable({
         />
       </div>
 
-      {/* Filters */}
-      <div className="mt-2 flex items-center justify-start md:justify-end gap-2">
-        <span>
-          {latestCheck != null && (
-            <span className="text-xs text-muted-foreground">
-              {t.common.latestCheckLabel}: {new Intl.DateTimeFormat(t.locale, {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              }).format(new Date(latestCheck))}
+      {/* Controls - reorganized for mobile */}
+      <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        {/* Buttons - horizontal row, same line on all screens */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsDark((v) => !v)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm ${
+              isDark ? "text-foreground" : "text-muted-foreground"
+            }`}
+            aria-label="Toggle theme"
+            aria-pressed={isDark}
+            title={isDark ? t.common.switchToLight : t.common.switchToDark}
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            <span className="hidden sm:inline">
+              {isDark ? t.common.themeLight : t.common.themeDark}
             </span>
-          )}
-        </span>
-        <button
-          onClick={() => setIsDark((v) => !v)}
-          className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm ${
-            isDark ? "text-foreground" : "text-muted-foreground"
-          }`}
-          aria-label="Toggle theme"
-          aria-pressed={isDark}
-          title={isDark ? t.common.switchToLight : t.common.switchToDark}
-        >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          <span>{isDark ? t.common.themeLight : t.common.themeDark}</span>
-        </button>
-        <button
-          onClick={() => setLocale(locale === "sl" ? "en" : "sl")}
-          className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm text-muted-foreground"
-          aria-label="Toggle language"
-          title={
-            locale === "sl" ? "Switch to English" : "Preklopi v slovenščino"
-          }
-        >
-          <Globe size={16} />
-          <span className="tabular-nums">{locale.toUpperCase()}</span>
-        </button>
-        <button
-          onClick={() => setShowFilterModal(true)}
-          className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm text-muted-foreground"
-          aria-haspopup="dialog"
-        >
-          <SlidersHorizontal size={16} />
-          <span>{t.common.manageFilters}</span>
-        </button>
+          </button>
+          <button
+            onClick={() => setLocale(locale === "sl" ? "en" : "sl")}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm text-muted-foreground"
+            aria-label="Toggle language"
+            title={
+              locale === "sl" ? "Switch to English" : "Preklopi v slovenščino"
+            }
+          >
+            <Globe size={16} />
+            <span className="tabular-nums">{locale.toUpperCase()}</span>
+          </button>
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm text-muted-foreground"
+            aria-haspopup="dialog"
+          >
+            <SlidersHorizontal size={16} />
+            <span>{t.common.manageFilters}</span>
+          </button>
+        </div>
+
+        {/* Latest check - aligned properly */}
+        {latestCheck != null && (
+          <div className="text-xs text-muted-foreground flex items-center">
+            {t.common.latestCheckLabel}:{" "}
+            {new Intl.DateTimeFormat(t.locale, {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            }).format(new Date(latestCheck))}
+          </div>
+        )}
       </div>
 
       {loading && (
@@ -495,18 +317,48 @@ export function Timetable({
           />
           {/* current time indicator for Day view (only when the selected day is today) */}
           {(() => {
+            // Only show indicator if selected day is today
+            if (!selectedDay) return null;
+            const today = new Date();
+            const isToday =
+              selectedDay.getFullYear() === today.getFullYear() &&
+              selectedDay.getMonth() === today.getMonth() &&
+              selectedDay.getDate() === today.getDate();
+
+            if (!isToday) return null;
+
+            // Check if current time is within visible hours
+            const parts = ljParts(now);
+            const currentHour = Number(
+              parts.find((p) => p.type === "hour")?.value ?? "0"
+            );
+
+            // Hide indicator if outside of visible hours (before 7 or after 21)
+            if (currentHour < DAY_START || currentHour > DAY_END) {
+              return null;
+            }
+
             const columnHeight = (hours.length - 1) * HOUR_HEIGHT;
             const rawTop = nowTopPx() + 8; // +8 to account for column mt-2
             const top = Math.min(Math.max(rawTop, 8), columnHeight + 8); // clamp within visible area
+
             return (
               <div
                 className="pointer-events-none absolute inset-x-0 z-30"
                 style={{ top }}
               >
-                <div className="absolute left-16 right-0 h-0 border-t-2 border-blue-500" />
-                <div className="absolute left-0 w-16 -translate-y-1/2 text-xs font-semibold text-blue-600">
-                  {nowLabel()}
+                {/* Red line across the schedule */}
+                <div className="absolute left-12 md:left-16 right-0 h-0 border-t-2 border-red-500" />
+
+                {/* Time label on the left - above time axis */}
+                <div className="absolute left-0 w-12 md:w-16 -translate-y-1/2 flex items-center justify-center z-40">
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
+                    {nowLabel()}
+                  </span>
                 </div>
+
+                {/* Red dot at the start of the line */}
+                <div className="absolute left-12 md:left-16 w-2 h-2 bg-red-500 rounded-full -translate-x-1/2 -translate-y-1/2" />
               </div>
             );
           })()}
@@ -519,7 +371,7 @@ export function Timetable({
             hours={hours}
             hourHeight={HOUR_HEIGHT}
             dayStart={DAY_START}
-            events={filteredByGroup}
+            events={filteredEvents}
             onEventClick={(ev) => setSelectedEvent(ev)}
           />
         </div>
