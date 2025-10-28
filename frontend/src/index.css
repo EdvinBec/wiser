@@ -47,24 +47,25 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Winter wonderland theme - clean white with icy blue accents */
+  --background: oklch(0.99 0.005 240); /* Clean white with tiny blue hint */
+  --foreground: oklch(0.25 0.02 250); /* Deep winter blue text */
+  --card: oklch(0.99 0.008 240);
+  --card-foreground: oklch(0.25 0.02 250);
+  --popover: oklch(0.99 0.008 240);
+  --popover-foreground: oklch(0.25 0.02 250);
+  --primary: oklch(0.5 0.2 240); /* Vibrant winter blue for buttons/links */
+  --primary-foreground: oklch(0.99 0.008 240);
+  --secondary: oklch(0.88 0.08 250); /* Blue-lavender for secondary elements */
+  --secondary-foreground: oklch(0.25 0.02 250);
+  --muted: oklch(0.94 0.015 240);
+  --muted-foreground: oklch(0.5 0.02 250);
+  --accent: oklch(0.7 0.15 250); /* Vibrant icy blue accent */
+  --accent-foreground: oklch(0.98 0.01 240);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.88 0.04 245); /* Visible blue tinted borders */
+  --input: oklch(0.92 0.03 245);
+  --ring: oklch(0.55 0.2 240); /* Bright blue focus rings */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -81,37 +82,38 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Cozy winter night theme - deep blues with warm accents */
+  --background: oklch(0.18 0.05 245); /* Deep midnight blue with more saturation */
+  --foreground: oklch(0.95 0.02 240); /* Soft snow white with hint of blue */
+  --card: oklch(0.22 0.05 245);
+  --card-foreground: oklch(0.95 0.02 240);
+  --popover: oklch(0.22 0.05 245);
+  --popover-foreground: oklch(0.95 0.02 240);
+  --primary: oklch(0.6 0.22 240); /* More vibrant icy blue */
+  --primary-foreground: oklch(0.98 0.008 240);
+  --secondary: oklch(0.3 0.08 255); /* More blue-purple frost */
+  --secondary-foreground: oklch(0.95 0.02 240);
+  --muted: oklch(0.26 0.05 245);
+  --muted-foreground: oklch(0.65 0.05 240);
+  --accent: oklch(0.4 0.15 265); /* More vibrant blue-purple glow */
+  --accent-foreground: oklch(0.95 0.02 240);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: oklch(0.3 0.05 245 / 40%);
+  --input: oklch(0.3 0.05 245 / 50%);
+  --ring: oklch(0.6 0.2 240);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.22 0.03 250);
+  --sidebar-foreground: oklch(0.95 0.01 240);
+  --sidebar-primary: oklch(0.65 0.18 240);
+  --sidebar-primary-foreground: oklch(0.98 0.008 240);
+  --sidebar-accent: oklch(0.28 0.04 260);
+  --sidebar-accent-foreground: oklch(0.95 0.01 240);
+  --sidebar-border: oklch(0.3 0.03 250 / 40%);
+  --sidebar-ring: oklch(0.6 0.15 240);
 }
 
 @layer base {
@@ -121,5 +123,309 @@
   body {
     @apply bg-background text-foreground antialiased;
     overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Winter frost gradient overlay with blue tones */
+  #root::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 250px;
+    background: linear-gradient(
+      180deg,
+      oklch(0.9 0.08 240 / 0.15) 0%,
+      oklch(0.95 0.04 250 / 0.08) 40%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .dark #root::after {
+    background: linear-gradient(
+      180deg,
+      oklch(0.25 0.12 245 / 0.4) 0%,
+      oklch(0.2 0.08 250 / 0.2) 40%,
+      transparent 100%
+    );
+  }
+}
+
+/* ❄️ Winter Cute Snowflakes Animation ❄️ */
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowfall-gentle {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(30px) rotate(180deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(-10px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowfall-drift {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(-40px) rotate(-180deg);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(20px) rotate(-360deg);
+    opacity: 0;
+  }
+}
+
+/* Scattered snowflakes - each with different position and timing */
+body::before {
+  content: "❄️";
+  position: fixed;
+  top: 0;
+  left: 15%;
+  font-size: 1.5rem;
+  opacity: 0.25;
+  animation: snowfall 15s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+main::before {
+  content: "❄️";
+  position: fixed;
+  top: 0;
+  left: 45%;
+  font-size: 1.2rem;
+  opacity: 0.2;
+  animation: snowfall-gentle 20s linear infinite 2s;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+main::after {
+  content: "❄️";
+  position: fixed;
+  top: 0;
+  left: 75%;
+  font-size: 1.8rem;
+  opacity: 0.18;
+  animation: snowfall-drift 18s linear infinite 5s;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Extra scattered snowflakes using nav and header if they exist */
+nav::before {
+  content: "❄️";
+  position: fixed;
+  top: 0;
+  left: 30%;
+  font-size: 1.3rem;
+  opacity: 0.22;
+  animation: snowfall-gentle 17s linear infinite 3s;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+header::before {
+  content: "❄️";
+  position: fixed;
+  top: 0;
+  left: 85%;
+  font-size: 1.4rem;
+  opacity: 0.2;
+  animation: snowfall 19s linear infinite 7s;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Add more cute rounded corners everywhere */
+button, input, select, textarea {
+  @apply rounded-xl;
+}
+
+/* Cute shadow effects */
+.hover\:brightness-95:hover {
+  filter: brightness(0.95) drop-shadow(0 2px 8px rgba(99, 102, 241, 0.15));
+}
+
+/* Frost effect on cards with blue shimmer */
+[class*="bg-card"], [class*="bg-popover"] {
+  background-image:
+    radial-gradient(circle at 20% 20%, oklch(0.95 0.06 240 / 0.5) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, oklch(0.93 0.08 260 / 0.4) 0%, transparent 50%);
+}
+
+.dark [class*="bg-card"], .dark [class*="bg-popover"] {
+  background-image:
+    radial-gradient(circle at 20% 20%, oklch(0.28 0.12 240 / 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, oklch(0.26 0.10 260 / 0.3) 0%, transparent 50%);
+}
+
+/*
+ * ═══════════════════════════════════════════════════════════════
+ * 🎄 WINTER EASTER EGGS & QUIRKY FEATURES 🎄
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * This app has several fun winter-themed easter eggs:
+ *
+ * 1. 🎄 CHRISTMAS TREE: Scroll down the page and a cute Christmas
+ *    tree appears in the bottom-right corner! Hover over it for
+ *    a surprise.
+ *
+ * 2. ⛄ SNOWMAN ARMY: Triple-click the "Urnik" logo to unleash
+ *    a marching army of snowmen across your screen!
+ *
+ * 3. ❄️ SNOW STORM: Type "snow" anywhere on the page (not in
+ *    input fields) to trigger a magical snow storm!
+ *
+ * 4. 👆 FRIDAY MAGIC: On Fridays, your cursor turns into a
+ *    snowflake! Because Fridays deserve to be special.
+ *
+ * Happy winter! ☃️
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* 🎄 Christmas tree animation 🎄 */
+@keyframes tree-grow {
+  0% {
+    transform: scale(0) rotate(-10deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes tree-sway {
+  0%, 100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes lights-twinkle {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.6;
+    filter: brightness(1.5);
+  }
+}
+
+/* Hidden Christmas tree in the corner that grows when you scroll */
+body {
+  position: relative;
+}
+
+body::after {
+  content: "🎄";
+  position: fixed;
+  bottom: -100px;
+  right: 20px;
+  font-size: 4rem;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10000;
+  transition: bottom 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 0.6s ease;
+  animation: tree-sway 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(34, 139, 34, 0.3));
+}
+
+/* Tree appears when scrolling down */
+@media (min-width: 768px) {
+  body.scrolled::after {
+    bottom: 20px;
+    opacity: 0.7;
+    animation: tree-grow 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
+               tree-sway 3s ease-in-out infinite 0.8s;
+  }
+
+  body.scrolled::after:hover {
+    opacity: 1;
+    font-size: 5rem;
+    transform: scale(1.1);
+    cursor: pointer;
+    animation: tree-sway 1s ease-in-out infinite, lights-twinkle 0.5s ease-in-out infinite;
+  }
+}
+
+/* Easter egg: Snowman army on triple-click of the logo */
+@keyframes snowman-march {
+  0% {
+    transform: translateX(-100vw) rotate(0deg);
+  }
+  50% {
+    transform: translateX(50vw) rotate(180deg);
+  }
+  100% {
+    transform: translateX(120vw) rotate(360deg);
+  }
+}
+
+.snowman-party {
+  position: fixed;
+  bottom: 50%;
+  left: 0;
+  font-size: 3rem;
+  pointer-events: none;
+  z-index: 10001;
+  animation: snowman-march 8s linear forwards;
+}
+
+/* Cursor becomes a snowflake on Fridays (because why not) */
+@media (min-width: 768px) {
+  body.winter-friday {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">❄️</text></svg>'), auto;
+  }
+
+  body.winter-friday button,
+  body.winter-friday a,
+  body.winter-friday [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">👆</text></svg>'), pointer;
   }
 }

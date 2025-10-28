@@ -3,6 +3,7 @@ import { TimeAxis } from "./TimeAxis";
 import { useNow } from "@/lib/useNow";
 import { ScheduleColumn } from "./ScheduleColumn";
 import { useI18n } from "@/lib/i18n";
+import { academicWeekStart, isSameDay } from "@/utils/academicCalendar";
 
 type Props = {
   academicYear: number; // e.g., 2025 means AY 2025/26
@@ -13,36 +14,6 @@ type Props = {
   events: TimetableEvent[];
   onEventClick?: (ev: TimetableEvent) => void;
 };
-
-function toMonday(d: Date) {
-  const day = d.getDay();
-  const diff = (day + 6) % 7; // 0 for Mon, 6 for Sun
-  const m = new Date(d);
-  m.setDate(d.getDate() - diff);
-  m.setHours(0, 0, 0, 0);
-  return m;
-}
-
-function academicWeek1Monday(academicYear: number) {
-  // Week containing Oct 1 of academicYear
-  const oct1 = new Date(academicYear, 9, 1);
-  return toMonday(oct1);
-}
-
-function academicWeekStart(academicYear: number, weekNumber: number) {
-  const start = academicWeek1Monday(academicYear);
-  const d = new Date(start);
-  d.setDate(start.getDate() + (weekNumber - 1) * 7);
-  return d;
-}
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
 
 export function WeekGrid({
   academicYear,
@@ -91,53 +62,81 @@ export function WeekGrid({
 
   return (
     <div className="w-full">
-      <div className="flex relative overflow-x-hidden">
-        {/* fixed time axis on the left (with time label overlay) */}
-        <div className="relative" style={{ paddingTop: HEADER_H }}>
+      <div className="flex relative overflow-hidden">
+        {/* fixed time axis on the left (hidden on mobile, shown on md+) */}
+        <div className="hidden md:block relative flex-shrink-0" style={{ paddingTop: HEADER_H }}>
           <TimeAxis hours={hours} hourHeight={hourHeight} />
+
+          {/* Time indicator badge - positioned absolutely over the time axis */}
           {(() => {
-            const rawTop = nowTopPx() + 8; // align with column mt-2
-            const top = Math.min(
-              Math.max(rawTop + HEADER_H, 8),
-              columnHeight + 8 + HEADER_H
+            // Check if this week contains today
+            const today = new Date();
+            const isThisWeek = days.some(day =>
+              day.getFullYear() === today.getFullYear() &&
+              day.getMonth() === today.getMonth() &&
+              day.getDate() === today.getDate()
             );
+
+            if (!isThisWeek) return null;
+
+            // Check if current time is within visible hours
+            const parts = ljParts(now);
+            const currentHour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+
+            // Hide indicator if outside of visible hours (before 7 or after 21)
+            if (currentHour < dayStart || currentHour > 21) {
+              return null;
+            }
+
+            const rawTop = nowTopPx() + 8; // align with column mt-2
+            const top = rawTop; // Same as the red line
+
             return (
               <div
-                className="pointer-events-none absolute left-0 w-16 -translate-y-1/2 z-30"
-                style={{ top }}
+                className="pointer-events-none absolute left-0 right-0 z-50 flex items-center justify-center"
+                style={{ top, transform: 'translateY(-50%)' }}
               >
-                <div className="text-xs font-semibold text-blue-600">{nowLabel()}</div>
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                  {nowLabel()}
+                </span>
               </div>
             );
           })()}
         </div>
 
-        {/* scrollable on small screens; fits and centers on large screens */}
-        <div className="flex-1 overflow-x-auto lg:overflow-visible lg:px-2">
-          <div className="min-w-max lg:min-w-0 lg:max-w-[1200px] lg:mx-auto">
-            {/* day headers */}
-            <div className="flex lg:grid lg:grid-cols-5 text-sm text-muted-foreground select-none">
+        {/* scrollable week view with better mobile support */}
+        <div className="flex-1 overflow-x-auto md:overflow-x-visible">
+          <div className="min-w-max md:min-w-0">
+            {/* day headers - compact on mobile */}
+            <div className="flex text-xs md:text-sm text-muted-foreground select-none">
               {days.map((d) => (
                 <div
                   key={d.toISOString()}
-                  className="w-[220px] flex-none lg:w-auto lg:min-w-0 px-2 py-2 border-b border-border"
+                  className="w-[160px] sm:w-[180px] md:w-[200px] lg:w-[220px] flex-none px-2 py-2 border-b border-border"
                 >
-                  {new Intl.DateTimeFormat(t.locale, {
-                    weekday: "short",
-                  }).format(d)}
-                  <span className="ml-2 text-muted-foreground/70">
-                    {new Intl.DateTimeFormat(t.locale).format(d)}
-                  </span>
+                  <div className="truncate">
+                    <span className="font-medium">
+                      {new Intl.DateTimeFormat(t.locale, {
+                        weekday: "short",
+                      }).format(d)}
+                    </span>
+                    <span className="ml-1 text-muted-foreground/70 text-[10px] md:text-xs">
+                      {new Intl.DateTimeFormat(t.locale, {
+                        day: "numeric",
+                        month: "numeric",
+                      }).format(d)}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* columns */}
-            <div className="relative flex lg:grid lg:grid-cols-5">
+            {/* columns - wider on mobile now that time axis is hidden */}
+            <div className="relative flex">
               {days.map((d) => (
                 <div
                   key={d.toISOString()}
-                  className="w-[220px] flex-none lg:w-auto lg:min-w-0 border-l border-border/60 last:border-r"
+                  className="w-[160px] sm:w-[180px] md:w-[200px] lg:w-[220px] flex-none border-l border-border/60 last:border-r"
                 >
                   <ScheduleColumn
                     hours={hours}
@@ -149,14 +148,37 @@ export function WeekGrid({
                 </div>
               ))}
               {(() => {
+                // Check if current time is within visible hours
+                const parts = ljParts(now);
+                const currentHour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+
+                // Hide indicator if outside of visible hours (before 7 or after 21)
+                if (currentHour < dayStart || currentHour > 21) {
+                  return null;
+                }
+
+                // Check if this week contains today
+                const today = new Date();
+                const isThisWeek = days.some(day =>
+                  day.getFullYear() === today.getFullYear() &&
+                  day.getMonth() === today.getMonth() &&
+                  day.getDate() === today.getDate()
+                );
+
+                if (!isThisWeek) return null;
+
                 const rawTop = nowTopPx() + 8; // align with column mt-2
-                const top = Math.min(Math.max(rawTop, 8), columnHeight + 8);
+                const top = rawTop;
+
                 return (
                   <div
                     className="pointer-events-none absolute left-0 right-0 z-30"
                     style={{ top }}
                   >
-                    <div className="h-0 border-t-2 border-blue-500" />
+                    {/* Red line across all columns */}
+                    <div className="h-0 border-t-2 border-red-500" />
+                    {/* Red dot at the start */}
+                    <div className="absolute left-0 w-2 h-2 bg-red-500 rounded-full -translate-x-1/2 -translate-y-1/2" />
                   </div>
                 );
               })()}

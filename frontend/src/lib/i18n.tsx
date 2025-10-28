@@ -30,6 +30,7 @@ type Dict = {
     disclaimerPrefix: string;
     timetable: string;
     latestCheckLabel: string;
+    staleDataWarning: string;
   };
   header: {
     showBy: string;
@@ -71,6 +72,7 @@ const dicts: Record<Locale, Dict> = {
       disclaimerPrefix: "This app uses data from the",
       timetable: " timetable and is not affiliated with Wise Technologies.",
       latestCheckLabel: "Latest check",
+      staleDataWarning: "Data might not be up to date. Last update was more than 30 minutes ago.",
     },
     header: {
       showBy: "Show by:",
@@ -121,6 +123,7 @@ const dicts: Record<Locale, Dict> = {
       disclaimerPrefix: "Aplikacija uporablja podatke iz",
       timetable: "urnika in ni povezana s podjetjem Wise Technologies.",
       latestCheckLabel: "Zadnji zajem",
+      staleDataWarning: "Podatki morda niso najnovejši. Zadnja posodobitev je bila pred več kot 30 minutami.",
     },
     header: {
       showBy: "Prikaz:",

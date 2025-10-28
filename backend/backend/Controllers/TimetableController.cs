@@ -142,6 +142,11 @@ public class TimetableController : ControllerBase
     {
         var course = await _database.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
 
+        if (course == null)
+        {
+            return NotFound(new { message = $"Course with ID {courseId} not found" });
+        }
+
         return Ok(new
         {
             CourseId = course.Id,

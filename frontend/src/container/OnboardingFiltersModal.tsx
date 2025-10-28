@@ -42,7 +42,7 @@ export function OnboardingFiltersModal({
       groups
         .filter((g) => {
           const n = (g.name ?? "").trim();
-          return n !== "" && n !== "RIT 2" && n !== "ITK 1";
+          return n !== "" && n !== "RIT 2";
         })
         .map((g) => ({ id: g.id, name: g.name })),
     [groups]
