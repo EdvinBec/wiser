@@ -1,4 +1,5 @@
 using backend.Data;
+using backend.Misc;
 
 namespace backend.Services;
 
@@ -6,15 +7,18 @@ public class ExcelFetcherWorker : BackgroundService
 {
     private readonly ExcelFetcherService _fetcher;
     private readonly ExcelParserService _parser;
-    private readonly ILogger<ExcelFetcherWorker> _log;
-    
-    private static readonly int[] GradesToFetch = { 1 }; 
+    private readonly Logger _logger;
 
-    public ExcelFetcherWorker(ExcelFetcherService fetcher, ExcelParserService parser, ILogger<ExcelFetcherWorker> log)
+    private static readonly TimeSpan DelayBetweenCourses = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan DelayAfterError = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan DelayBetweenCycles = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan DelayAfterCriticalError = TimeSpan.FromMinutes(10); 
+
+    public ExcelFetcherWorker(ExcelFetcherService fetcher, ExcelParserService parser, Logger logger)
     {
         _fetcher = fetcher;
         _parser = parser;
-        _log = log;
+        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -23,39 +27,42 @@ public class ExcelFetcherWorker : BackgroundService
         {
             try
             {
-                _log.LogInformation("Starting Excel fetch sweep…");
+                await _logger.LogAsync(LogLevel.Information, "Starting Excel fetch sweep…");
 
-                // Iterate all class codes from Selectors.CourseMap
                 foreach (var courseCode in Selectors.CourseMap.Keys)
                 {
-                    var grade = Selectors.Course2GradeMap[courseCode];
-                   
-                        if (stoppingToken.IsCancellationRequested) break;
+                    if (stoppingToken.IsCancellationRequested)
+                        break;
 
-                        try
-                        {
-                            _log.LogInformation("Fetching course {CourseCode}, grade {Grade}", courseCode, grade);
-                            string groupName = Selectors.Course2CodeMap[courseCode];
-                            await _fetcher.DownloadsExcel(courseCode, grade, groupName);
-                            _log.LogInformation("Done: {CourseCode}-{Grade}", courseCode, grade);
-                            
-                            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            _log.LogWarning(ex, "Fetch failed for {CourseCode}-{Grade}", courseCode, grade);
-                            await Task.Delay(TimeSpan.FromMinutes(3), stoppingToken);
-                        }
+                    var grade = Selectors.Course2GradeMap[courseCode];
+                    var groupName = Selectors.Course2CodeMap[courseCode];
+
+                    try
+                    {
+                        await _logger.LogAsync(LogLevel.Information, $"Fetching course {courseCode}, grade {grade}");
+                        await _fetcher.DownloadsExcel(courseCode, grade, groupName, stoppingToken);
+                        await _logger.LogAsync(LogLevel.Information, $"Done: {courseCode}-{grade}");
+
+                        await Task.Delay(DelayBetweenCourses, stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        await _logger.LogAsync(LogLevel.Warning, $"Fetch failed for {courseCode}-{grade}", ex);
+                        await Task.Delay(DelayAfterError, stoppingToken);
+                    }
                 }
 
-                _log.LogInformation("Excel fetch sweep complete. Sleeping until next cycle");
-                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                await _logger.LogAsync(LogLevel.Information, "Excel fetch sweep complete. Sleeping until next cycle");
+                await Task.Delay(DelayBetweenCycles, stoppingToken);
             }
-            catch (TaskCanceledException) { /* app shutting down */ }
+            catch (OperationCanceledException)
+            {
+                // App shutting down
+            }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Unhandled error in ExcelFetcherWorker loop.");
-                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+                await _logger.LogAsync(LogLevel.Error, "Unhandled error in ExcelFetcherWorker loop.", ex);
+                await Task.Delay(DelayAfterCriticalError, stoppingToken);
             }
         }
     }

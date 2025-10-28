@@ -1,7 +1,12 @@
 using System.Text.Json.Serialization;
 using backend.Infrastructure.Database;
+using backend.Misc;
 using backend.Services;
 using Microsoft.EntityFrameworkCore;
+using DotNetEnv;
+
+// Load .env file if it exists
+Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +28,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 // App services (check that singletons don't depend on scoped DbContext)
+builder.Services.AddSingleton(new Logger("wiser.log"));
 builder.Services.AddSingleton<ExcelFetcherService>();
 builder.Services.AddSingleton<ExcelParserService>();
 builder.Services.AddScoped<DatabaseService>();

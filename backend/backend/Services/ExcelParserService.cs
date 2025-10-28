@@ -2,6 +2,7 @@ using backend.Configs;
 using backend.Helpers;
 using backend.Models;
 using backend.Models.Enums;
+using backend.Misc;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 
@@ -11,20 +12,41 @@ public class ExcelParserService
 {
     private readonly ExcelFetcherService _fetcher;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<ExcelParserService> _log;
-    
-    public ExcelParserService(ExcelFetcherService fetcher, IServiceScopeFactory scopeFactory, ILogger<ExcelParserService> log)
+    private readonly Logger _logger;
+
+    private const int ColumnDay = 0;
+    private const int ColumnDate = 1;
+    private const int ColumnTime = 2;
+    private const int ColumnRoom = 3;
+    private const int ColumnType = 4;
+    private const int ColumnGroup = 5;
+    private const int ColumnInstructor = 6;
+    private const string HeaderMarker = "Dan";
+
+    public ExcelParserService(ExcelFetcherService fetcher, IServiceScopeFactory scopeFactory, Logger logger)
     {
         _fetcher = fetcher;
         _scopeFactory = scopeFactory;
-        _log = log;
+        _logger = logger;
         _fetcher.ExcelFileUpdated += OnExcelFileUpdated;
         _fetcher.ExcelFetched += UpdateLatestCheck;
     }
 
     private async void OnExcelFileUpdated(object? sender, ExcelFetcherService.ExcelDownloadedEventArgs e)
     {
-        List<Session> sessions = new List<Session>();
+        try
+        {
+            await ProcessExcelFileAsync(e);
+        }
+        catch (Exception ex)
+        {
+            await _logger.LogAsync(LogLevel.Error, $"Failed to process Excel file for {e.CourseCode}-{e.Grade}", ex);
+        }
+    }
+
+    private async Task ProcessExcelFileAsync(ExcelFetcherService.ExcelDownloadedEventArgs e)
+    {
+        var sessions = new List<Session>();
         int totalRowsSeen = 0;
         int headerMarkersSeen = 0;
         int sessionRowsConsidered = 0;
@@ -32,7 +54,7 @@ public class ExcelParserService
         int rowsSkippedUnknownDay = 0;
         int rowsSkippedNoClass = 0;
         int rowErrors = 0;
-        
+
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -40,9 +62,8 @@ public class ExcelParserService
             ISheet sheet;
             string path = e.Path;
 
-            // Save the course to the database
             var courseId = await database.CreateCourseAsync(e.CourseCode, e.Grade, DateTimeOffset.Now);
-            _log.LogInformation("{CurrentTime} - Parsing Excel for {Course}-{Grade}. CourseId={CourseId}. Path={Path}", DateTime.Now, e.CourseCode, e.Grade, courseId, path);
+            await _logger.LogAsync(LogLevel.Information, $"Parsing Excel for {e.CourseCode}-{e.Grade}. CourseId={courseId}. Path={path}");
 
             using (var fStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -69,20 +90,20 @@ public class ExcelParserService
                         continue;
                     }
                     
-                    var dayCell = row.GetCell(0);
-                    
+                    var dayCell = row.GetCell(ColumnDay);
+
                     // Find and save the class name
-                    if (dayCell.ToString() == "Dan")
+                    if (dayCell.ToString() == HeaderMarker)
                     {
                         var classNameRow = sheet.GetRow(j - 1);
-                        var className = classNameRow.GetCell(0)?.ToString()?.Trim();
+                        var className = classNameRow.GetCell(ColumnDay)?.ToString()?.Trim();
                         if (className == null)
                         {
                             throw new ArgumentNullException("Class name cell is missing");
                         }
                         classId = await database.CreateClassAsync(className, courseId);
-                        
-                        _log.LogInformation("{CurrentTime} - Class saved to database. Name={ClassName}, Id={ClassId}", DateTime.Now, className, classId);
+
+                        await _logger.LogAsync(LogLevel.Information, $"Class saved to database. Name={className}, Id={classId}");
                         headerMarkersSeen++;
                         continue;
                     }
@@ -93,17 +114,13 @@ public class ExcelParserService
 
                         try
                         {
-                            // Raw cell data
-                            dayCell = row.GetCell(0);
-                            var dateCell = row.GetCell(1);
-                            var timeCell = row.GetCell(2);
-                            var roomCell = row.GetCell(3);
-                            var typeCell = row.GetCell(4);
-                            var groupCell = row.GetCell(5);
-                            var instructorCell = row.GetCell(6);
-                            
-                            // Parsed data
-                            var day = dayCell.ToString()?.Trim();
+                            dayCell = row.GetCell(ColumnDay);
+                            var dateCell = row.GetCell(ColumnDate);
+                            var timeCell = row.GetCell(ColumnTime);
+                            var roomCell = row.GetCell(ColumnRoom);
+                            var typeCell = row.GetCell(ColumnType);
+                            var groupCell = row.GetCell(ColumnGroup);
+                            var instructorCell = row.GetCell(ColumnInstructor);
                             
                             var dateString = dateCell.ToString()?.Trim();
                             if (dateString == null)
@@ -126,30 +143,12 @@ public class ExcelParserService
                             }
                             var roomId = await database.CreateRoomAsync(room);
 
-                            SessionType type;
                             var typeString = typeCell.ToString()?.Trim();
                             if (typeString == null)
                             {
                                 throw new ArgumentNullException("Type cell is missing");
                             }
-                            switch (typeString)
-                            {
-                                case "PR":
-                                    type = SessionType.Lecture;
-                                    break;
-                                case "RV":
-                                    type = SessionType.ComputerExercise;
-                                    break;
-                                case "SV":
-                                    type = SessionType.SeminarExercise;
-                                    break;
-                                case "LV":
-                                    type = SessionType.LabExercise;
-                                    break;
-                                default:
-                                    type = SessionType.Other;
-                                    break;
-                            }
+                            var type = ParseSessionType(typeString);
 
                             List<int> groupIds = new List<int>();
                             List<string> groups = new List<string>();
@@ -217,7 +216,7 @@ public class ExcelParserService
                         catch (Exception ex)
                         {
                             rowErrors++;
-                            _log.LogWarning(ex, "{CurrentTime} - Failed to parse session row {RowIndex}", DateTime.Now, j);
+                            await _logger.LogAsync(LogLevel.Warning, $"Failed to parse session row {j}", ex);
                         }
                     }
                     else
@@ -236,22 +235,41 @@ public class ExcelParserService
                 await database.SaveContext();
             });
 
-            _log.LogInformation(
-                "{CurrentTime} - Parse summary for {Course}-{Grade}: totalRows={Total}, headers={Headers}, considered={Considered}, parsedSessions={Parsed}, skippedNoClass={NoClass}, skippedUnknownDay={UnknownDay}, rowErrors={RowErrors}",
-                DateTime.Now, e.CourseCode, e.Grade, totalRowsSeen, headerMarkersSeen, sessionRowsConsidered, sessionsParsed, rowsSkippedNoClass, rowsSkippedUnknownDay, rowErrors);
+            await _logger.LogAsync(
+                LogLevel.Information,
+                $"Parse summary for {e.CourseCode}-{e.Grade}: totalRows={totalRowsSeen}, headers={headerMarkersSeen}, considered={sessionRowsConsidered}, parsedSessions={sessionsParsed}, skippedNoClass={rowsSkippedNoClass}, skippedUnknownDay={rowsSkippedUnknownDay}, rowErrors={rowErrors}");
         }
         catch (Exception exception)
         {
-            _log.LogError(exception, "{CurrentTime} - Parser failed for {Course}-{Grade}", DateTime.Now, e.CourseCode, e.Grade);
+            await _logger.LogAsync(LogLevel.Error, $"Parser failed for {e.CourseCode}-{e.Grade}", exception);
             throw;
         }
     }
 
+    private static SessionType ParseSessionType(string typeString)
+    {
+        return typeString switch
+        {
+            "PR" => SessionType.Lecture,
+            "RV" => SessionType.ComputerExercise,
+            "SV" => SessionType.SeminarExercise,
+            "LV" => SessionType.LabExercise,
+            _ => SessionType.Other
+        };
+    }
+
     private async void UpdateLatestCheck(object? sender, ExcelFetcherService.ExcelFetchedEventArgs e)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var database = scope.ServiceProvider.GetRequiredService<DatabaseService>();
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var database = scope.ServiceProvider.GetRequiredService<DatabaseService>();
 
-        await database.UpdateCourseAsync(e.CourseCode, e.Grade, e.LatestCheck);
+            await database.UpdateCourseAsync(e.CourseCode, e.Grade, e.LatestCheck);
+        }
+        catch (Exception ex)
+        {
+            await _logger.LogAsync(LogLevel.Error, $"Failed to update latest check for {e.CourseCode}-{e.Grade}", ex);
+        }
     }
 }
