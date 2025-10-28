@@ -62,26 +62,32 @@ export function WeekGrid({
 
   return (
     <div className="w-full">
-      <div className="flex relative overflow-hidden">
+      <div className="flex relative">
         {/* fixed time axis on the left (hidden on mobile, shown on md+) */}
-        <div className="hidden md:block relative flex-shrink-0" style={{ paddingTop: HEADER_H }}>
+        <div
+          className="hidden md:block relative flex-shrink-0"
+          style={{ paddingTop: HEADER_H }}
+        >
           <TimeAxis hours={hours} hourHeight={hourHeight} />
 
           {/* Time indicator badge - positioned absolutely over the time axis */}
           {(() => {
             // Check if this week contains today
             const today = new Date();
-            const isThisWeek = days.some(day =>
-              day.getFullYear() === today.getFullYear() &&
-              day.getMonth() === today.getMonth() &&
-              day.getDate() === today.getDate()
+            const isThisWeek = days.some(
+              (day) =>
+                day.getFullYear() === today.getFullYear() &&
+                day.getMonth() === today.getMonth() &&
+                day.getDate() === today.getDate()
             );
 
             if (!isThisWeek) return null;
 
             // Check if current time is within visible hours
             const parts = ljParts(now);
-            const currentHour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+            const currentHour = Number(
+              parts.find((p) => p.type === "hour")?.value ?? "0"
+            );
 
             // Hide indicator if outside of visible hours (before 7 or after 21)
             if (currentHour < dayStart || currentHour > 21) {
@@ -94,7 +100,7 @@ export function WeekGrid({
             return (
               <div
                 className="pointer-events-none absolute left-0 right-0 z-50 flex items-center justify-center"
-                style={{ top, transform: 'translateY(-50%)' }}
+                style={{ top, transform: "translateY(-50%)" }}
               >
                 <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
                   {nowLabel()}
@@ -105,7 +111,7 @@ export function WeekGrid({
         </div>
 
         {/* scrollable week view with better mobile support */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden md:overflow-x-visible md:overflow-y-visible [overscroll-behavior-x:contain] [touch-action:pan-x]">
+        <div className="flex-1 overflow-x-auto overflow-y-visible md:overflow-x-visible [overscroll-behavior-x:contain] [touch-action:pan-y_pan-x_pinch-zoom]">
           <div className="min-w-max md:min-w-0">
             {/* day headers - compact on mobile */}
             <div className="flex text-xs md:text-sm text-muted-foreground select-none">
@@ -150,7 +156,9 @@ export function WeekGrid({
               {(() => {
                 // Check if current time is within visible hours
                 const parts = ljParts(now);
-                const currentHour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+                const currentHour = Number(
+                  parts.find((p) => p.type === "hour")?.value ?? "0"
+                );
 
                 // Hide indicator if outside of visible hours (before 7 or after 21)
                 if (currentHour < dayStart || currentHour > 21) {
@@ -159,10 +167,11 @@ export function WeekGrid({
 
                 // Check if this week contains today
                 const today = new Date();
-                const isThisWeek = days.some(day =>
-                  day.getFullYear() === today.getFullYear() &&
-                  day.getMonth() === today.getMonth() &&
-                  day.getDate() === today.getDate()
+                const isThisWeek = days.some(
+                  (day) =>
+                    day.getFullYear() === today.getFullYear() &&
+                    day.getMonth() === today.getMonth() &&
+                    day.getDate() === today.getDate()
                 );
 
                 if (!isThisWeek) return null;
