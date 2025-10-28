@@ -26,7 +26,7 @@ public class Logger
     {
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
         var plainEntry = $"{timestamp} [{level}] {message}";
-        if (ex != null)
+        if (ex != null && level != LogLevel.Warning)
             plainEntry += $"{Environment.NewLine}Exception: {ex}";
 
         var entryToFile = _useAnsiInFile

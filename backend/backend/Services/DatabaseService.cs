@@ -2,19 +2,19 @@ using backend.Infrastructure.Database;
 using backend.Models;
 using backend.Models.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using backend.Misc;
 
 namespace backend.Services;
 
 public class DatabaseService
 {
     private readonly AppDbContext _context;
-    private readonly ILogger<DatabaseService> _log;
+    private readonly Logger _logger;
 
-    public DatabaseService(AppDbContext context, ILogger<DatabaseService> log)
+    public DatabaseService(AppDbContext context, Logger logger)
     {
         _context = context;
-        _log = log;
+        _logger = logger;
     }
 
     public async Task<int> CreateCourseAsync(string code, int grade, DateTimeOffset now)
@@ -192,11 +192,11 @@ public class DatabaseService
 
         if (sessions.Count == 0)
         {
-            _log.LogInformation("No existing sessions to delete for courseId={CourseId}", courseId);
+            await _logger.LogAsync(LogLevel.Information, $"No existing sessions to delete for courseId={courseId}");
             return; // nothing to delete
         }
 
-        _log.LogInformation("Deleting {Count} existing sessions for courseId={CourseId}", sessions.Count, courseId);
+        await _logger.LogAsync(LogLevel.Information, $"Deleting {sessions.Count} existing sessions for courseId={courseId}");
         _context.Sessions.RemoveRange(sessions);
         await _context.SaveChangesAsync();
     }
@@ -206,22 +206,22 @@ public class DatabaseService
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            _log.LogInformation("DB transaction begin");
+            await _logger.LogAsync(LogLevel.Information, "DB transaction begin");
             await action();
             await transaction.CommitAsync();
-            _log.LogInformation("DB transaction committed");
+            await _logger.LogAsync(LogLevel.Information, "DB transaction committed");
         }
         catch
         {
             await transaction.RollbackAsync();
-            _log.LogWarning("DB transaction rolled back");
+            await _logger.LogAsync(LogLevel.Warning, "DB transaction rolled back");
             throw;
         }
     }
 
     public async Task AddSessions(List<Session> sessions)
     {
-        _log.LogInformation("Adding {Count} new sessions", sessions?.Count ?? 0);
+        await _logger.LogAsync(LogLevel.Information, $"Adding {sessions?.Count ?? 0} new sessions");
         foreach (var s in sessions)
         {
             _context.Sessions.Add(s);
