@@ -2,53 +2,18 @@ namespace backend.Data;
 
 public static class Selectors
 {
-    public static readonly Dictionary<string, string> ButtonMap = new()
-    {
-        { "COURSE", "form\\:j_idt187" },
-        { "GRADE", "form\\:j_idt191" },
-        { "IZPISI", "form\\:j_idt252" },
-        { "EXCEL", "reporstForm\\:j_idt802" }
-    };
-    
-    public static readonly Dictionary<int, string> GradeMap = new()
-    {
-        { 1, "form\\:j_idt191_1" },
-        { 2, "form\\:j_idt191_2" },
-        { 3, "form\\:j_idt191_3" },
-    };
-
     public static readonly Dictionary<string, string> Course2CodeMap = new()
     {
-        { "BV20", "RIT 2" },
-        { "BV30", "ITK 1" },
+        { "BV20", "RIT 2" }
     };
-    
+
     public static readonly Dictionary<string, int> Course2GradeMap = new()
     {
-        { "BV20", 2 },
-        { "BV30", 1 },
+        { "BV20", 2 }
     };
-    
+
     public static readonly Dictionary<string, string> CourseMap = new()
     {
-        /*{ "BU10", "form\\:j_idt175_1" },
-        { "BV10", "form\\:j_idt175_2" },
-        { "BU80", "form\\:j_idt175_3" },*/
-        { "BV30", "form\\:j_idt187_4" },
-        /*{ "BU50", "form\\:j_idt175_5" },
-        { "BU20", "form\\:j_idt175_6" },*/
-        { "BV20", "form\\:j_idt187_7" },
-        /*{ "BU40", "form\\:j_idt175_8" },
-        { "BU70", "form\\:j_idt175_9" },
-        { "BV70", "form\\:j_idt175_10" },
-        { "BMM7", "form\\:j_idt175_11" },
-        { "BM10", "form\\:j_idt175_12" },
-        { "BM80", "form\\:j_idt175_13" },
-        { "BM50", "form\\:j_idt175_14" },
-        { "BM20", "form\\:j_idt175_15" },
-        { "BM40", "form\\:j_idt175_16" },
-        { "ERASMUS", "form\\:j_idt175_17" },
-        { "KOOD", "form\\:j_idt175_18" },
-        { "DOKTORSKI", "form\\:j_idt175_19" }*/
+        { "BV20", "_7" }
     };
 }

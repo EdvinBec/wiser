@@ -11,7 +11,8 @@ services:
       __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "urnik.live,.urnik.live"
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   backend:
     build: ./backend
@@ -21,9 +22,17 @@ services:
     environment:
       DB_CONNECTION_STRING: "Host=database;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       DOWNLOAD_PATH: /app/Data/ExcelFiles
+      SCREENSHOT_PATH: /app/Data/Screenshots
+      LOG_FILE_DIRECTORY: /app/Data/Logs
     restart: unless-stopped
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/5013' "]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   database:
     image: postgres
@@ -35,10 +44,20 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
+    profiles: ["tools"]
     restart: always
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
@@ -46,4 +65,5 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - database
+      database:
+        condition: service_healthy
