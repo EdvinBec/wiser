@@ -1,8 +1,13 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using backend.Infrastructure.Database;
 using backend.Misc;
+using backend.Models;
 using backend.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using DotNetEnv;
 
 // Load .env file if it exists
@@ -27,11 +32,53 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connStr);
 });
 
+// Identity
+builder.Services.AddIdentityCore<AppUser>(options =>
+{
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<AppDbContext>();
+
+// JWT + Google auth
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = "Cookies"; // Google needs cookies for OAuth state
+})
+.AddCookie("Cookies")
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]
+                ?? throw new InvalidOperationException("Jwt:Secret is not configured"))),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidateLifetime = true,
+    };
+})
+.AddGoogle(options =>
+{
+    options.ClientId = builder.Configuration["Google:ClientId"]
+        ?? throw new InvalidOperationException("Google:ClientId is not configured");
+    options.ClientSecret = builder.Configuration["Google:ClientSecret"]
+        ?? throw new InvalidOperationException("Google:ClientSecret is not configured");
+    options.SignInScheme = "Cookies";
+});
+
+builder.Services.AddAuthorization();
+
 // App services (check that singletons don't depend on scoped DbContext)
 builder.Services.AddSingleton(new Logger("wiser.log"));
 builder.Services.AddSingleton<ExcelFetcherService>();
 builder.Services.AddSingleton<ExcelParserService>();
 builder.Services.AddScoped<DatabaseService>();
+builder.Services.AddScoped<TokenService>();
 builder.Services.AddHostedService<ExcelFetcherWorker>();
 
 // Controllers + JSON enum as string
@@ -78,6 +125,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("DevCors");
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
