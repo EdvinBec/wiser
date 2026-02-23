@@ -1,3 +1,4 @@
+using backend.DTOs;
 using backend.Models;
 using backend.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -70,5 +71,52 @@ public class AuthController : ControllerBase
         // Redirect to frontend with the token in the URL
         var frontendUrl = _config["Frontend:Url"] ?? "http://localhost:5173";
         return Redirect($"{frontendUrl}/auth/callback?token={token}");
+    }
+
+    // Register with email/password
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        // Check if user already exists
+        var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+        if (existingUser != null)
+            return BadRequest(new { message = "User with this email already exists" });
+
+        var user = new AppUser
+        {
+            UserName = dto.Email,
+            Email = dto.Email,
+            DisplayName = dto.Name
+        };
+
+        var result = await _userManager.CreateAsync(user, dto.Password);
+
+        if (!result.Succeeded)
+            return BadRequest(new { message = string.Join(", ", result.Errors.Select(e => e.Description)) });
+
+        var token = _tokenService.CreateToken(user);
+        return Ok(new { token });
+    }
+
+    // Login with email/password
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var user = await _userManager.FindByEmailAsync(dto.Email);
+        if (user == null)
+            return Unauthorized(new { message = "Invalid email or password" });
+
+        var result = await _userManager.CheckPasswordAsync(user, dto.Password);
+        if (!result)
+            return Unauthorized(new { message = "Invalid email or password" });
+
+        var token = _tokenService.CreateToken(user);
+        return Ok(new { token });
     }
 }

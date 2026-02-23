@@ -1,8 +1,8 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 .font-inter {
-  font-family: "Inter", sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -83,7 +83,9 @@
 
 .dark {
   /* Cozy winter night theme - deep blues with warm accents */
-  --background: oklch(0.18 0.05 245); /* Deep midnight blue with more saturation */
+  --background: oklch(
+    0.18 0.05 245
+  ); /* Deep midnight blue with more saturation */
   --foreground: oklch(0.95 0.02 240); /* Soft snow white with hint of blue */
   --card: oklch(0.22 0.05 245);
   --card-foreground: oklch(0.95 0.02 240);
@@ -128,7 +130,7 @@
 
   /* Winter frost gradient overlay with blue tones */
   #root::after {
-    content: "";
+    content: '';
     position: fixed;
     top: 0;
     left: 0;
@@ -155,7 +157,33 @@
 }
 
 /* ❄️ Winter Cute Snowflakes Animation ❄️ */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes snowfall {
+  0% {
+    transform: translateY(-100vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowfall-gentle {
   0% {
     transform: translateY(-10vh) rotate(0deg);
     opacity: 0;
@@ -215,7 +243,7 @@
 
 /* Scattered snowflakes - each with different position and timing */
 body::before {
-  content: "❄️";
+  content: '❄️';
   position: fixed;
   top: 0;
   left: 15%;
@@ -227,7 +255,7 @@ body::before {
 }
 
 main::before {
-  content: "❄️";
+  content: '❄️';
   position: fixed;
   top: 0;
   left: 45%;
@@ -239,7 +267,7 @@ main::before {
 }
 
 main::after {
-  content: "❄️";
+  content: '❄️';
   position: fixed;
   top: 0;
   left: 75%;
@@ -252,7 +280,7 @@ main::after {
 
 /* Extra scattered snowflakes using nav and header if they exist */
 nav::before {
-  content: "❄️";
+  content: '❄️';
   position: fixed;
   top: 0;
   left: 30%;
@@ -264,7 +292,7 @@ nav::before {
 }
 
 header::before {
-  content: "❄️";
+  content: '❄️';
   position: fixed;
   top: 0;
   left: 85%;
@@ -276,7 +304,10 @@ header::before {
 }
 
 /* Add more cute rounded corners everywhere */
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   @apply rounded-xl;
 }
 
@@ -286,16 +317,34 @@ button, input, select, textarea {
 }
 
 /* Frost effect on cards with blue shimmer */
-[class*="bg-card"], [class*="bg-popover"] {
+[class*='bg-card'],
+[class*='bg-popover'] {
   background-image:
-    radial-gradient(circle at 20% 20%, oklch(0.95 0.06 240 / 0.5) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, oklch(0.93 0.08 260 / 0.4) 0%, transparent 50%);
+    radial-gradient(
+      circle at 20% 20%,
+      oklch(0.95 0.06 240 / 0.5) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      oklch(0.93 0.08 260 / 0.4) 0%,
+      transparent 50%
+    );
 }
 
-.dark [class*="bg-card"], .dark [class*="bg-popover"] {
+.dark [class*='bg-card'],
+.dark [class*='bg-popover'] {
   background-image:
-    radial-gradient(circle at 20% 20%, oklch(0.28 0.12 240 / 0.4) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, oklch(0.26 0.10 260 / 0.3) 0%, transparent 50%);
+    radial-gradient(
+      circle at 20% 20%,
+      oklch(0.28 0.12 240 / 0.4) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      oklch(0.26 0.1 260 / 0.3) 0%,
+      transparent 50%
+    );
 }
 
 /*
@@ -338,7 +387,8 @@ button, input, select, textarea {
 }
 
 @keyframes tree-sway {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(-2deg);
   }
   50% {
@@ -347,7 +397,8 @@ button, input, select, textarea {
 }
 
 @keyframes lights-twinkle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     filter: brightness(1);
   }
@@ -363,7 +414,7 @@ body {
 }
 
 body::after {
-  content: "🎄";
+  content: '🎄';
   position: fixed;
   bottom: -100px;
   right: 20px;
@@ -371,7 +422,9 @@ body::after {
   opacity: 0;
   pointer-events: none;
   z-index: 10000;
-  transition: bottom 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 0.6s ease;
+  transition:
+    bottom 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+    opacity 0.6s ease;
   animation: tree-sway 3s ease-in-out infinite;
   filter: drop-shadow(0 4px 12px rgba(34, 139, 34, 0.3));
 }
@@ -381,8 +434,9 @@ body::after {
   body.scrolled::after {
     bottom: 20px;
     opacity: 0.7;
-    animation: tree-grow 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
-               tree-sway 3s ease-in-out infinite 0.8s;
+    animation:
+      tree-grow 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
+      tree-sway 3s ease-in-out infinite 0.8s;
   }
 
   body.scrolled::after:hover {
@@ -390,7 +444,9 @@ body::after {
     font-size: 5rem;
     transform: scale(1.1);
     cursor: pointer;
-    animation: tree-sway 1s ease-in-out infinite, lights-twinkle 0.5s ease-in-out infinite;
+    animation:
+      tree-sway 1s ease-in-out infinite,
+      lights-twinkle 0.5s ease-in-out infinite;
   }
 }
 
@@ -420,12 +476,16 @@ body::after {
 /* Cursor becomes a snowflake on Fridays (because why not) */
 @media (min-width: 768px) {
   body.winter-friday {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">❄️</text></svg>'), auto;
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">❄️</text></svg>'),
+      auto;
   }
 
   body.winter-friday button,
   body.winter-friday a,
-  body.winter-friday [role="button"] {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">👆</text></svg>'), pointer;
+  body.winter-friday [role='button'] {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">👆</text></svg>'),
+      pointer;
   }
 }
