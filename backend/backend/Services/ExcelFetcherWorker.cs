@@ -1,5 +1,6 @@
 using backend.Data;
 using backend.Misc;
+using backend.DTOs;
 
 namespace backend.Services;
 
@@ -8,6 +9,7 @@ public class ExcelFetcherWorker : BackgroundService
     private readonly ExcelFetcherService _fetcher;
     private readonly ExcelParserService _parser;
     private readonly Logger _logger;
+    private List<Selectors.CourseConfig> _courseConfigs = new();
 
     private static readonly TimeSpan DelayBetweenCourses = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan DelayAfterError = TimeSpan.FromMinutes(3);
@@ -21,33 +23,102 @@ public class ExcelFetcherWorker : BackgroundService
         _logger = logger;
     }
 
+    private async Task<bool> InitializeCourseConfigsAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            await _logger.LogAsync(LogLevel.Information, "Initializing course configurations by scraping form options...");
+            
+            var formOptions = await _fetcher.ScrapeFormOptionsAsync(stoppingToken);
+            
+            // Build all combinations of course/grade/project - FILTER FOR ONLY BV20
+            _courseConfigs.Clear();
+            
+            // Only process BV20 course
+            var bv20Course = formOptions.CourseOptions.FirstOrDefault(c => c.Value == "BV20");
+            if (bv20Course != null)
+            {
+                foreach (var grade in formOptions.GradeOptions)
+                {
+                    // Get projects specifically for this grade
+                    var projectsForGrade = formOptions.ProjectsByGrade.ContainsKey(grade.Value)
+                        ? formOptions.ProjectsByGrade[grade.Value]
+                        : new List<DropdownOptionDto>();
+
+                    foreach (var project in projectsForGrade)
+                    {
+                        _courseConfigs.Add(new Selectors.CourseConfig
+                        {
+                            CourseCode = bv20Course.Value,
+                            Grade = int.Parse(grade.Value),
+                            Project = project.Value,
+                            GroupName = $"{bv20Course.Value} {grade.Value}"
+                        });
+                    }
+                }
+            }
+            
+            await _logger.LogAsync(LogLevel.Information, 
+                $"Initialized {_courseConfigs.Count} course configurations for BV20");
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await _logger.LogAsync(LogLevel.Error, "Failed to initialize course configs", ex);
+            return false;
+        }
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Initialize course configs from scraped form options
+        var initialized = await InitializeCourseConfigsAsync(stoppingToken);
+        if (!initialized)
+        {
+            await _logger.LogAsync(LogLevel.Error, "Failed to initialize. Worker will retry in 1 minute.");
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await _logger.LogAsync(LogLevel.Information, "Starting Excel fetch sweep…");
+                // Re-scrape options to check for any new grades/projects
+                if (_courseConfigs.Count == 0)
+                {
+                    await InitializeCourseConfigsAsync(stoppingToken);
+                }
 
-                foreach (var courseCode in Selectors.CourseMap.Keys)
+                if (_courseConfigs.Count == 0)
+                {
+                    await _logger.LogAsync(LogLevel.Warning, "No course configs available. Retrying in 5 minutes.");
+                    await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+                    continue;
+                }
+
+                await _logger.LogAsync(LogLevel.Information, 
+                    $"Starting Excel fetch sweep for {_courseConfigs.Count} courses...");
+
+                foreach (var config in _courseConfigs)
                 {
                     if (stoppingToken.IsCancellationRequested)
                         break;
 
-                    var grade = Selectors.Course2GradeMap[courseCode];
-                    var groupName = Selectors.Course2CodeMap[courseCode];
-
                     try
                     {
-                        await _logger.LogAsync(LogLevel.Information, $"Fetching course {courseCode}, grade {grade}");
-                        await _fetcher.DownloadsExcel(courseCode, grade, groupName, stoppingToken);
-                        await _logger.LogAsync(LogLevel.Information, $"Done: {courseCode}-{grade}");
+                        await _logger.LogAsync(LogLevel.Information, 
+                            $"Fetching course {config.CourseCode}, grade {config.Grade}, project {config.Project}");
+                        await _fetcher.DownloadsExcel(config.CourseCode, config.Grade, config.Project, config.GroupName, stoppingToken);
+                        await _logger.LogAsync(LogLevel.Information, 
+                            $"Done: {config.CourseCode}-{config.Grade}-{config.Project}");
 
                         await Task.Delay(DelayBetweenCourses, stoppingToken);
                     }
                     catch (Exception ex)
                     {
-                        await _logger.LogAsync(LogLevel.Warning, $"Fetch failed for {courseCode}-{grade}", ex);
+                        await _logger.LogAsync(LogLevel.Warning, 
+                            $"Fetch failed for {config.CourseCode}-{config.Grade}-{config.Project}", ex);
                         await Task.Delay(DelayAfterError, stoppingToken);
                     }
                 }

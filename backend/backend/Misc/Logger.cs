@@ -5,7 +5,7 @@ public class Logger
 {
     private readonly string _logDirectory =
         Environment.GetEnvironmentVariable("LOG_FILE_DIRECTORY")
-        ?? "/Users/edvinbecic/Personal/wiser/backend/backend/Logs";
+        ?? Path.Combine(Directory.GetCurrentDirectory(), "Logs");
 
     private readonly string _logFilePath;
     private readonly object _lock = new();

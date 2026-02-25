@@ -34,6 +34,7 @@ public class ExcelParserService
 
     private async void OnExcelFileUpdated(object? sender, ExcelFetcherService.ExcelDownloadedEventArgs e)
     {
+        await _logger.LogAsync(LogLevel.Information, $"Excel file updated event received for {e.CourseCode}-{e.Grade}-{e.Project}");
         try
         {
             await ProcessExcelFileAsync(e);
@@ -62,8 +63,8 @@ public class ExcelParserService
             ISheet sheet;
             string path = e.Path;
 
-            var courseId = await database.CreateCourseAsync(e.CourseCode, e.Grade, DateTimeOffset.Now);
-            await _logger.LogAsync(LogLevel.Information, $"Parsing Excel for {e.CourseCode}-{e.Grade}. CourseId={courseId}. Path={path}");
+            var courseId = await database.CreateCourseAsync(e.CourseCode, e.Grade, e.Project, DateTimeOffset.Now);
+            await _logger.LogAsync(LogLevel.Information, $"Parsing Excel for {e.CourseCode}-{e.Grade}-{e.Project}. CourseId={courseId}. Path={path}");
 
             using (var fStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -108,21 +109,27 @@ public class ExcelParserService
                         continue;
                     }
 
-                    if (ExcelParserConfig.daysInWeek.Contains(dayCell.ToString()!) && classId != null)
+                    // Check if this is a valid session row by looking for a date in the date column
+                    // This is more reliable than checking day names (Ponedeljek vs Ponedelje)
+                    var dateCell = row.GetCell(ColumnDate);
+                    var dateString = dateCell?.ToString()?.Trim();
+                    bool isSessionRow = !string.IsNullOrWhiteSpace(dateString) && 
+                                       dateString.Contains(".") && 
+                                       classId != null;
+
+                    if (isSessionRow)
                     {
                         sessionRowsConsidered++;
 
                         try
                         {
                             dayCell = row.GetCell(ColumnDay);
-                            var dateCell = row.GetCell(ColumnDate);
                             var timeCell = row.GetCell(ColumnTime);
                             var roomCell = row.GetCell(ColumnRoom);
                             var typeCell = row.GetCell(ColumnType);
                             var groupCell = row.GetCell(ColumnGroup);
                             var instructorCell = row.GetCell(ColumnInstructor);
                             
-                            var dateString = dateCell.ToString()?.Trim();
                             if (dateString == null)
                             {
                                 throw new ArgumentNullException("Date cell is missing");
@@ -157,22 +164,47 @@ public class ExcelParserService
                             {
                                 throw new ArgumentNullException("Groups cell is missing");
                             }
-                            // First check if there are multiple groups
-                            var groupParts = groupsString.Split(',');
-                            foreach (var part in groupParts)
+                            
+                            await _logger.LogAsync(LogLevel.Debug, $"Row {j}: Type={typeString}, Groups={groupsString}");
+                            
+                            // For lectures (PR), ignore groups to avoid duplicates across projects
+                            // Project filter already handles filtering, so we don't need group-level separation
+                            if (type == SessionType.Lecture)
                             {
-                                var partString = part.Trim();
-                                var partSplit = partString.Split("VS");
-                                if (partSplit[0].Trim() == e.GroupName)
+                                // Create one session without specific group - project filter will handle visibility
+                                groups.Add("PR"); // Use a standard marker for lectures
+                            }
+                            else
+                            {
+                                // Parse all groups from the cell (format: "BV20 VS 1.a, BV20 VS 1.b")
+                                var groupParts = groupsString.Split(',');
+                                foreach (var part in groupParts)
                                 {
-                                    if (type == SessionType.Lecture || type == SessionType.SeminarExercise)
+                                    var partString = part.Trim();
+                                    
+                                    // Format is typically "COURSE_CODE VS GROUP_NUMBER"
+                                    // e.g., "BV20 VS 1.a" or just "BV20" for seminars
+                                    var partSplit = partString.Split("VS", StringSplitOptions.TrimEntries);
+                                    
+                                    if (type == SessionType.SeminarExercise)
                                     {
+                                        // For seminars, use the course code part
                                         groups.Add(partSplit[0].Trim());
-                                        continue;
                                     }
-                                    groups.Add(partSplit[1].Trim());
+                                    else if (partSplit.Length > 1)
+                                    {
+                                        // For exercises, use the specific group number
+                                        groups.Add(partSplit[1].Trim());
+                                    }
+                                    else
+                                    {
+                                        // Fallback - use the whole string
+                                        groups.Add(partString);
+                                    }
                                 }
                             }
+                            
+                            await _logger.LogAsync(LogLevel.Debug, $"  Parsed groups: {string.Join(", ", groups)} (count: {groups.Count})");
                                 
                             foreach (var group in groups)
                             {
@@ -197,7 +229,11 @@ public class ExcelParserService
                                 throw new InvalidOperationException("ClassId is missing");
                             }
                             
-                            foreach (var groupId in groupIds)
+                            await _logger.LogAsync(LogLevel.Debug, $"  Creating {groupIds.Count} sessions for classes/groups");
+                            
+                            // For lectures, create only ONE session (ignore multiple groups to avoid duplicates)
+                            // For other types, create one session per group
+                            if (type == SessionType.Lecture && groupIds.Count > 0)
                             {
                                 sessions.Add(new Session
                                 {
@@ -208,9 +244,27 @@ public class ExcelParserService
                                     StartAt = startDateTimeOffset.ToUniversalTime(),
                                     FinishAt = finishDateTimeOffset.ToUniversalTime(),
                                     Type = type,
-                                    GroupId = groupId
+                                    GroupId = groupIds[0] // Use first group as marker
                                 });
                                 sessionsParsed++;
+                            }
+                            else
+                            {
+                                foreach (var groupId in groupIds)
+                                {
+                                    sessions.Add(new Session
+                                    {
+                                        CourseId = courseId,
+                                        ClassId = (int)classId,
+                                        InstructorId = instructorId,
+                                        RoomId = roomId,
+                                        StartAt = startDateTimeOffset.ToUniversalTime(),
+                                        FinishAt = finishDateTimeOffset.ToUniversalTime(),
+                                        Type = type,
+                                        GroupId = groupId
+                                    });
+                                    sessionsParsed++;
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -248,14 +302,16 @@ public class ExcelParserService
 
     private static SessionType ParseSessionType(string typeString)
     {
-        return typeString switch
-        {
-            "PR" => SessionType.Lecture,
-            "RV" => SessionType.ComputerExercise,
-            "SV" => SessionType.SeminarExercise,
-            "LV" => SessionType.LabExercise,
-            _ => SessionType.Other
-        };
+        // Extract session type code (PR, RV, SV, LV) from the string
+        // Handles formats like "PR", "(O) PR", "(o) SV", etc.
+        var upper = typeString.ToUpper().Trim();
+        
+        if (upper.Contains("PR")) return SessionType.Lecture;
+        if (upper.Contains("RV")) return SessionType.ComputerExercise;
+        if (upper.Contains("SV")) return SessionType.SeminarExercise;
+        if (upper.Contains("LV")) return SessionType.LabExercise;
+        
+        return SessionType.Other;
     }
 
     private async void UpdateLatestCheck(object? sender, ExcelFetcherService.ExcelFetchedEventArgs e)
@@ -265,11 +321,11 @@ public class ExcelParserService
             using var scope = _scopeFactory.CreateScope();
             var database = scope.ServiceProvider.GetRequiredService<DatabaseService>();
 
-            await database.UpdateCourseAsync(e.CourseCode, e.Grade, e.LatestCheck);
+            await database.UpdateCourseAsync(e.CourseCode, e.Grade, e.Project, e.LatestCheck);
         }
         catch (Exception ex)
         {
-            await _logger.LogAsync(LogLevel.Error, $"Failed to update latest check for {e.CourseCode}-{e.Grade}", ex);
+            await _logger.LogAsync(LogLevel.Error, $"Failed to update latest check for {e.CourseCode}-{e.Grade}-{e.Project}", ex);
         }
     }
 }

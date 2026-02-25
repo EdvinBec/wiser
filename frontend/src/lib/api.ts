@@ -1,7 +1,9 @@
-import type { TimetableEvent } from "@/types/TimetableEvent";
-import type { TimetableEventType } from "@/types/TimetableEventType";
+import type {TimetableEvent} from '@/types/TimetableEvent';
+import type {TimetableEventType} from '@/types/TimetableEventType';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const API_BASE = `${
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013'
+}/api/timetable`;
 
 type ApiEvent = {
   id: number;
@@ -24,17 +26,21 @@ type ApiEvent = {
 // the offset and interpret as Europe/Ljubljana wall time.
 function parseLjubljanaLocalISO(raw: string): Date {
   // If there is a timezone designator and it's a non-zero offset, trust it
-  const tzMatch = raw.match(/(Z|[+\-]\d{2}:?\d{2})$/i);
+  const tzMatch = raw.match(/(Z|[+-]\d{2}:?\d{2})$/i);
   if (tzMatch) {
     const tz = tzMatch[1].toUpperCase();
     const isZeroOffset =
-      tz === "Z" || tz === "+00:00" || tz === "+0000" || tz === "-00:00" || tz === "-0000";
+      tz === 'Z' ||
+      tz === '+00:00' ||
+      tz === '+0000' ||
+      tz === '-00:00' ||
+      tz === '-0000';
     if (!isZeroOffset) return new Date(raw);
   }
 
   // Extract Y-M-D H:m[:s] ignoring fractional seconds and any (possibly zero) TZ suffix
   const m = raw.match(
-    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+\-]\d{2}:?\d{2})?$/i
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i,
   );
   if (!m) return new Date(raw);
 
@@ -50,22 +56,22 @@ function parseLjubljanaLocalISO(raw: string): Date {
   const probe = new Date(utcMs);
 
   // Derive GMT offset for Europe/Ljubljana at that moment, e.g. "GMT+2"
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Ljubljana",
-    timeZoneName: "short",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Ljubljana',
+    timeZoneName: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     hour12: false,
   }).formatToParts(probe);
-  const tzName = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
-  const mOff = tzName.match(/GMT([+\-])(\d{1,2})(?::?(\d{2}))?/);
+  const tzName = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
+  const mOff = tzName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
   let offsetMinutes = 0;
   if (mOff) {
-    const sign = mOff[1] === "-" ? -1 : 1;
+    const sign = mOff[1] === '-' ? -1 : 1;
     const hh = Number(mOff[2] ?? 0);
     const mm = Number(mOff[3] ?? 0);
     offsetMinutes = sign * (hh * 60 + mm);
@@ -85,7 +91,7 @@ function mapApiEvent(e: ApiEvent): TimetableEvent {
     instructorName: e.instructorName,
     roomId: Number(e.roomId),
     roomName: e.roomName,
-    type: (e.type as TimetableEventType) ?? "Lecture",
+    type: (e.type as TimetableEventType) ?? 'Lecture',
     groupId: Number(e.groupId),
     groupName: e.groupName,
     startAt: parseLjubljanaLocalISO(e.startAt),
@@ -97,10 +103,10 @@ export async function fetchWeekTimetable(
   academicYear: number,
   weekNumber: number,
   courseCode: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<TimetableEvent[]> {
   const url = `${API_BASE}/${academicYear}/${weekNumber}/${courseCode}`;
-  const res = await fetch(url, { signal });
+  const res = await fetch(url, {signal});
   if (!res.ok) throw new Error(`Failed week fetch: ${res.status}`);
   const data: ApiEvent[] = await res.json();
   return data.map(mapApiEvent);
@@ -111,46 +117,79 @@ export async function fetchDayTimetable(
   month: number, // 1-12
   day: number, // 1-31
   courseCode: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<TimetableEvent[]> {
   const url = `${API_BASE}/day/${academicYear}/${month}/${day}/${courseCode}`;
-  const res = await fetch(url, { signal });
+  const res = await fetch(url, {signal});
   if (!res.ok) throw new Error(`Failed day fetch: ${res.status}`);
   const data: ApiEvent[] = await res.json();
   return data.map(mapApiEvent);
 }
 
-export type ClassInfo = { id: number; name: string };
-export type GroupInfo = { id: number; name: string };
+export type ClassInfo = {id: number; name: string};
+export type GroupInfo = {id: number; name: string};
 
 export async function fetchClasses(
   courseId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<ClassInfo[]> {
-  const res = await fetch(`${API_BASE}/classes/${courseId}`, { signal });
+  const res = await fetch(`${API_BASE}/classes/${courseId}`, {signal});
   if (!res.ok) throw new Error(`Failed classes fetch: ${res.status}`);
   return res.json();
 }
 
 export async function fetchGroups(
   courseId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<GroupInfo[]> {
-  const res = await fetch(`${API_BASE}/groups/${courseId}`, { signal });
+  const res = await fetch(`${API_BASE}/groups/${courseId}`, {signal});
   if (!res.ok) throw new Error(`Failed groups fetch: ${res.status}`);
   return res.json();
 }
 
 export async function fetchLatestCheck(
   courseId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<number | null> {
-  const res = await fetch(`${API_BASE}/latestCheck/${courseId}`, { signal });
+  const res = await fetch(`${API_BASE}/latestCheck/${courseId}`, {signal});
   if (!res.ok) throw new Error(`Failed latest check fetch: ${res.status}`);
-  const data: any = await res.json();
+  const data: Record<string, unknown> = await res.json();
   // Support both ASP.NET default camelCase and explicit PascalCase keys
   const raw = data?.latestCheck ?? data?.LatestCheck;
   if (!raw) return null;
-  const ms = Date.parse(raw);
+  const ms = Date.parse(String(raw));
   return Number.isNaN(ms) ? null : ms;
+}
+
+// Legacy/stub functions for backward compatibility with unused components
+export type Group = {id: number; name: string};
+export type Course = {id: number; code: string; name: string};
+
+export async function fetchGroupsForGrade(
+  courseId: number,
+  _gradeId: number,
+  signal?: AbortSignal,
+): Promise<Group[]> {
+  // This is a stub - the component using this is not currently used
+  return fetchGroups(courseId, signal);
+}
+
+export async function scrapeCourses(): Promise<{
+  newCourses: number;
+  deactivated: number;
+}> {
+  // Stub function - SetupPage is not currently used
+  throw new Error('Not implemented');
+}
+
+export async function scrapeGradesForCourse(
+  _courseId: number,
+): Promise<{newGrades: number}> {
+  // Stub function - SetupPage is not currently used
+  throw new Error('Not implemented');
+}
+
+export async function fetchAvailableCourses(): Promise<Course[]> {
+  // Stub function - SetupPage is not currently used
+  return [];
 }

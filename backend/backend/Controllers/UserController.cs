@@ -147,7 +147,70 @@ public class UserController : ControllerBase
         await _db.SaveChangesAsync();
         return NoContent();
     }
+
+    // GET /user/preferences
+    [HttpGet("preferences")]
+    public async Task<IActionResult> GetPreferences()
+    {
+        var user = await _db.Users.FindAsync(CurrentUserId);
+        if (user == null) return NotFound();
+
+        return Ok(new
+        {
+            user.PreferredGrade,
+            user.PreferredProject
+        });
+    }
+
+    // PUT /user/preferences
+    [HttpPut("preferences")]
+    public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest req)
+    {
+        var user = await _db.Users.FindAsync(CurrentUserId);
+        if (user == null) return NotFound();
+
+        user.PreferredGrade = req.PreferredGrade;
+        user.PreferredProject = req.PreferredProject;
+
+        await _db.SaveChangesAsync();
+        return Ok(new
+        {
+            user.PreferredGrade,
+            user.PreferredProject
+        });
+    }
+
+    // GET /user/filters
+    [HttpGet("filters")]
+    public async Task<IActionResult> GetFilters()
+    {
+        var user = await _db.Users.FindAsync(CurrentUserId);
+        if (user == null) return NotFound();
+
+        return Ok(new
+        {
+            GroupFilters = user.GroupFilters ?? "{}"
+        });
+    }
+
+    // PUT /user/filters
+    [HttpPut("filters")]
+    public async Task<IActionResult> UpdateFilters([FromBody] UpdateFiltersRequest req)
+    {
+        var user = await _db.Users.FindAsync(CurrentUserId);
+        if (user == null) return NotFound();
+
+        user.GroupFilters = req.GroupFilters;
+
+        await _db.SaveChangesAsync();
+        return Ok(new
+        {
+            GroupFilters = user.GroupFilters
+        });
+    }
 }
 
 public record SaveGroupRequest(int GroupId);
 public record CreateEventRequest(string Title, string? Description, DateTimeOffset StartAt, DateTimeOffset FinishAt, string? Color);
+public record UpdatePreferencesRequest(string? PreferredGrade, string? PreferredProject);
+public record UpdateFiltersRequest(string? GroupFilters);

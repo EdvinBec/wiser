@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import {useState, useEffect} from 'react';
 import {
   fetchDayTimetable,
   fetchWeekTimetable,
@@ -7,12 +7,12 @@ import {
   fetchLatestCheck,
   type ClassInfo,
   type GroupInfo,
-} from "@/lib/api";
-import type { TimetableEvent } from "@/types/TimetableEvent";
-import { getAcademicWeekNumber } from "@/utils/academicCalendar";
+} from '@/lib/api';
+import type {TimetableEvent} from '@/types/TimetableEvent';
+import {getAcademicWeekNumber} from '@/utils/academicCalendar';
 
 interface UseTimetableDataParams {
-  selectedView: "day" | "week";
+  selectedView: 'day' | 'week';
   selectedDay: Date | null;
   selectedWeek: number | null;
   academicYear: number;
@@ -53,16 +53,16 @@ export function useTimetableData({
       setLoading(true);
       setError(null);
       try {
-        if (selectedView === "week") {
+        if (selectedView === 'week') {
           const wk = selectedWeek ?? getAcademicWeekNumber(new Date());
           const data = await fetchWeekTimetable(
             academicYear,
             wk,
             courseId,
-            controller.signal
+            controller.signal,
           );
           setEvents(data);
-        } else if (selectedView === "day" && selectedDay) {
+        } else if (selectedView === 'day' && selectedDay) {
           const month = selectedDay.getMonth() + 1;
           const day = selectedDay.getDate();
           // For day view, backend expects calendar year, not academic year
@@ -72,7 +72,7 @@ export function useTimetableData({
             month,
             day,
             courseId,
-            controller.signal
+            controller.signal,
           );
           setEvents(data);
         } else {
@@ -81,9 +81,9 @@ export function useTimetableData({
       } catch (e: any) {
         // Ignore abort errors triggered by effect cleanup
         const isAbort =
-          e?.name === "AbortError" || e?.message?.includes("aborted");
+          e?.name === 'AbortError' || e?.message?.includes('aborted');
         if (!isAbort) {
-          setError(e?.message ?? "Failed to load timetable");
+          setError(e?.message ?? 'Failed to load timetable');
           setEvents([]);
         }
       } finally {
@@ -109,8 +109,10 @@ export function useTimetableData({
         setGroups(gs);
         setLatestCheck(lc);
       } catch (e) {
+        // Ignore abort errors from cleanup
+        if (e instanceof Error && e.name === 'AbortError') return;
         // Silently fail - filters will just show nothing
-        console.warn("Failed to load classes/groups:", e);
+        console.warn('Failed to load classes/groups:', e);
       }
     })();
     return () => controller.abort();

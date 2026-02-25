@@ -17,11 +17,11 @@ public class DatabaseService
         _logger = logger;
     }
 
-    public async Task<int> CreateCourseAsync(string code, int grade, DateTimeOffset now)
+    public async Task<int> CreateCourseAsync(string code, int grade, string project, DateTimeOffset now)
     {
         // check if already exists
         var existing = await _context.Courses
-            .FirstOrDefaultAsync(c => c.Code == code && c.Grade == grade);
+            .FirstOrDefaultAsync(c => c.Code == code && c.Grade == grade && c.Project == project);
 
         if (existing != null)
         {
@@ -33,6 +33,7 @@ public class DatabaseService
         {
             Code = code,
             Grade = grade,
+            Project = project,
             LatestCheck = now.ToUniversalTime()
         };
 
@@ -42,14 +43,14 @@ public class DatabaseService
         return course.Id;
     }
 
-    public async Task<int> UpdateCourseAsync(string code, int grade, DateTimeOffset now)
+    public async Task<int> UpdateCourseAsync(string code, int grade, string project, DateTimeOffset now)
     {
         var existing = await _context.Courses
-            .FirstOrDefaultAsync(c => c.Code == code && c.Grade == grade);
+            .FirstOrDefaultAsync(c => c.Code == code && c.Grade == grade && c.Project == project);
 
         if (existing == null)
         {
-            throw new InvalidOperationException($"Course with code {code} and grade {grade} doesn't exist.");
+            throw new InvalidOperationException($"Course with code {code}, grade {grade} and project {project} doesn't exist.");
         }
         
         existing.LatestCheck = now.ToUniversalTime();
