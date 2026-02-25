@@ -15,7 +15,16 @@ export function AuthProvider({children}: {children: ReactNode}) {
     }
 
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Properly decode JWT with UTF-8 support (handles šumniki like ć, š, ž)
+      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(''),
+      );
+      const payload = JSON.parse(jsonPayload);
+
       setUser({
         id: payload[
           'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'

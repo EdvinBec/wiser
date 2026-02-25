@@ -49,8 +49,8 @@ public class TimetableController : ControllerBase
             Type = r.Type,
             GroupId = r.GroupId,
             GroupName = r.GroupName,
-            StartAt = r.StartAt,
-            FinishAt = r.FinishAt
+            StartAt = DateHelpers.ToLjubljana(r.StartAt.UtcDateTime),
+            FinishAt = DateHelpers.ToLjubljana(r.FinishAt.UtcDateTime)
         }).ToList();
 
         return Ok(sessions);
@@ -94,8 +94,8 @@ public class TimetableController : ControllerBase
             Type = r.Type,
             GroupId = r.GroupId,
             GroupName = r.GroupName,
-            StartAt  = r.StartAt.ToLocalTime(),
-            FinishAt = r.FinishAt.ToLocalTime()
+            StartAt = DateHelpers.ToLjubljana(r.StartAt.UtcDateTime),
+            FinishAt = DateHelpers.ToLjubljana(r.FinishAt.UtcDateTime)
         }).ToList();
 
         return Ok(sessions);
@@ -150,7 +150,7 @@ public class TimetableController : ControllerBase
         return Ok(new
         {
             CourseId = course.Id,
-            LatestCheck = course.LatestCheck.ToLocalTime()
+            LatestCheck = DateHelpers.ToLjubljana(course.LatestCheck.UtcDateTime)
         });
     }
 }

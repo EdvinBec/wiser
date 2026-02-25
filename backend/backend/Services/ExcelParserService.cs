@@ -241,8 +241,8 @@ public class ExcelParserService
                                     ClassId = (int)classId,
                                     InstructorId = instructorId,
                                     RoomId = roomId,
-                                    StartAt = startDateTimeOffset.ToUniversalTime(),
-                                    FinishAt = finishDateTimeOffset.ToUniversalTime(),
+                                    StartAt = startDateTimeOffset,
+                                    FinishAt = finishDateTimeOffset,
                                     Type = type,
                                     GroupId = groupIds[0] // Use first group as marker
                                 });
@@ -258,8 +258,8 @@ public class ExcelParserService
                                         ClassId = (int)classId,
                                         InstructorId = instructorId,
                                         RoomId = roomId,
-                                        StartAt = startDateTimeOffset.ToUniversalTime(),
-                                        FinishAt = finishDateTimeOffset.ToUniversalTime(),
+                                        StartAt = startDateTimeOffset,
+                                        FinishAt = finishDateTimeOffset,
                                         Type = type,
                                         GroupId = groupId
                                     });

@@ -25,7 +25,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013';
 export function useTimetableFilters(
   events: TimetableEvent[],
 ): UseTimetableFiltersReturn {
-  const {isAuthenticated} = useAuth();
+  const {isAuthenticated, token} = useAuth();
   const [groupFilter, setGroupFilterState] = useLocalStorageState<
     Record<number, number[]>
   >(
@@ -62,7 +62,7 @@ export function useTimetableFilters(
         try {
           const response = await fetch(`${API_BASE}/user/filters`, {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+              Authorization: `Bearer ${token}`,
             },
           });
           if (response.ok) {
@@ -97,7 +97,7 @@ export function useTimetableFilters(
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           groupFilters: JSON.stringify(newFilter),

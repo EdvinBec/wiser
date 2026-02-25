@@ -6,23 +6,31 @@ namespace backend.Helpers;
 
 public static class DateHelpers
 {
-    public static DateTimeOffset ConstructDateTimeFromString(string date, string time)
-    {
-        string combined = $"{date} {time}";
-
-        return DateTimeOffset.ParseExact(
-            combined,
-            "dd.MM.yyyy HH:mm",
-            CultureInfo.InvariantCulture);
-    }
-    
-    static readonly Regex DateRe = new(@"\b(\d{1,2}\.\d{1,2}\.\d{4})\b", RegexOptions.Compiled);
-    static readonly Regex TimeRe = new(@"\b(\d{1,2}:\d{2})\b", RegexOptions.Compiled);
-
     static TimeZoneInfo GetLjubljanaTz() =>
         OperatingSystem.IsWindows()
             ? TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time")
             : TimeZoneInfo.FindSystemTimeZoneById("Europe/Ljubljana");
+
+    public static DateTimeOffset ConstructDateTimeFromString(string date, string time)
+    {
+        string combined = $"{date} {time}";
+
+        // Parse as unspecified (no timezone assumption)
+        var localNaive = DateTime.ParseExact(
+            combined,
+            "dd.MM.yyyy HH:mm",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None);
+
+        // Convert Ljubljana local time to UTC for PostgreSQL storage
+        var utcDateTime = TimeZoneInfo.ConvertTimeToUtc(localNaive, GetLjubljanaTz());
+        
+        // Return as DateTimeOffset in UTC (PostgreSQL timestamptz requires offset 0)
+        return new DateTimeOffset(utcDateTime, TimeSpan.Zero);
+    }
+    
+    static readonly Regex DateRe = new(@"\b(\d{1,2}\.\d{1,2}\.\d{4})\b", RegexOptions.Compiled);
+    static readonly Regex TimeRe = new(@"\b(\d{1,2}:\d{2})\b", RegexOptions.Compiled);
 
     // Excel local -> UTC for storing in timestamptz
     public static DateTime ParseLocalToUtc(string date, string time, string format)

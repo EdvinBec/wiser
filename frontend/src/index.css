@@ -122,10 +122,16 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     overflow-x: hidden;
     position: relative;
+    max-width: 100vw;
   }
 
   /* Winter frost gradient overlay with blue tones */
@@ -156,159 +162,53 @@
   }
 }
 
-/* ❄️ Winter Cute Snowflakes Animation ❄️ */
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes snowfall {
-  0% {
-    transform: translateY(-100vh) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(100vh) translateX(100px) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-@keyframes snowfall-gentle {
-  0% {
-    transform: translateY(-10vh) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(110vh) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-@keyframes snowfall-gentle {
-  0% {
-    transform: translateY(-10vh) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(50vh) translateX(30px) rotate(180deg);
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(110vh) translateX(-10px) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-@keyframes snowfall-drift {
-  0% {
-    transform: translateY(-10vh) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(50vh) translateX(-40px) rotate(-180deg);
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(110vh) translateX(20px) rotate(-360deg);
-    opacity: 0;
-  }
-}
-
-/* Scattered snowflakes - each with different position and timing */
-body::before {
-  content: '❄️';
-  position: fixed;
-  top: 0;
-  left: 15%;
-  font-size: 1.5rem;
-  opacity: 0.25;
-  animation: snowfall 15s linear infinite;
-  pointer-events: none;
-  z-index: 9999;
-}
-
-main::before {
-  content: '❄️';
-  position: fixed;
-  top: 0;
-  left: 45%;
-  font-size: 1.2rem;
-  opacity: 0.2;
-  animation: snowfall-gentle 20s linear infinite 2s;
-  pointer-events: none;
-  z-index: 9998;
-}
-
-main::after {
-  content: '❄️';
-  position: fixed;
-  top: 0;
-  left: 75%;
-  font-size: 1.8rem;
-  opacity: 0.18;
-  animation: snowfall-drift 18s linear infinite 5s;
-  pointer-events: none;
-  z-index: 9998;
-}
-
-/* Extra scattered snowflakes using nav and header if they exist */
-nav::before {
-  content: '❄️';
-  position: fixed;
-  top: 0;
-  left: 30%;
-  font-size: 1.3rem;
-  opacity: 0.22;
-  animation: snowfall-gentle 17s linear infinite 3s;
-  pointer-events: none;
-  z-index: 9998;
-}
-
-header::before {
-  content: '❄️';
-  position: fixed;
-  top: 0;
-  left: 85%;
-  font-size: 1.4rem;
-  opacity: 0.2;
-  animation: snowfall 19s linear infinite 7s;
-  pointer-events: none;
-  z-index: 9998;
-}
-
 /* Add more cute rounded corners everywhere */
 button,
 input,
 select,
 textarea {
   @apply rounded-xl;
+}
+
+/* Mobile-friendly select elements - prevent overflow */
+select {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0; /* Allow shrinking below content size */
+}
+
+/* Ensure select options wrap properly on mobile */
+@media (max-width: 640px) {
+  select {
+    font-size: 16px; /* Prevents zoom on mobile Safari */
+  }
+
+  select option {
+    white-space: normal;
+    word-wrap: break-word;
+  }
+
+  /* Make buttons and inputs more touch-friendly on mobile */
+  button,
+  input,
+  select {
+    min-height: 44px; /* iOS touch target recommendation */
+  }
+}
+
+/* Prevent any element from causing horizontal overflow */
+* {
+  box-sizing: border-box;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Cute shadow effects */
@@ -345,147 +245,4 @@ textarea {
       oklch(0.26 0.1 260 / 0.3) 0%,
       transparent 50%
     );
-}
-
-/*
- * ═══════════════════════════════════════════════════════════════
- * 🎄 WINTER EASTER EGGS & QUIRKY FEATURES 🎄
- * ═══════════════════════════════════════════════════════════════
- *
- * This app has several fun winter-themed easter eggs:
- *
- * 1. 🎄 CHRISTMAS TREE: Scroll down the page and a cute Christmas
- *    tree appears in the bottom-right corner! Hover over it for
- *    a surprise.
- *
- * 2. ⛄ SNOWMAN ARMY: Triple-click the "Urnik" logo to unleash
- *    a marching army of snowmen across your screen!
- *
- * 3. ❄️ SNOW STORM: Type "snow" anywhere on the page (not in
- *    input fields) to trigger a magical snow storm!
- *
- * 4. 👆 FRIDAY MAGIC: On Fridays, your cursor turns into a
- *    snowflake! Because Fridays deserve to be special.
- *
- * Happy winter! ☃️
- * ═══════════════════════════════════════════════════════════════
- */
-
-/* 🎄 Christmas tree animation 🎄 */
-@keyframes tree-grow {
-  0% {
-    transform: scale(0) rotate(-10deg);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.2) rotate(5deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-  }
-}
-
-@keyframes tree-sway {
-  0%,
-  100% {
-    transform: rotate(-2deg);
-  }
-  50% {
-    transform: rotate(2deg);
-  }
-}
-
-@keyframes lights-twinkle {
-  0%,
-  100% {
-    opacity: 1;
-    filter: brightness(1);
-  }
-  50% {
-    opacity: 0.6;
-    filter: brightness(1.5);
-  }
-}
-
-/* Hidden Christmas tree in the corner that grows when you scroll */
-body {
-  position: relative;
-}
-
-body::after {
-  content: '🎄';
-  position: fixed;
-  bottom: -100px;
-  right: 20px;
-  font-size: 4rem;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 10000;
-  transition:
-    bottom 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55),
-    opacity 0.6s ease;
-  animation: tree-sway 3s ease-in-out infinite;
-  filter: drop-shadow(0 4px 12px rgba(34, 139, 34, 0.3));
-}
-
-/* Tree appears when scrolling down */
-@media (min-width: 768px) {
-  body.scrolled::after {
-    bottom: 20px;
-    opacity: 0.7;
-    animation:
-      tree-grow 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
-      tree-sway 3s ease-in-out infinite 0.8s;
-  }
-
-  body.scrolled::after:hover {
-    opacity: 1;
-    font-size: 5rem;
-    transform: scale(1.1);
-    cursor: pointer;
-    animation:
-      tree-sway 1s ease-in-out infinite,
-      lights-twinkle 0.5s ease-in-out infinite;
-  }
-}
-
-/* Easter egg: Snowman army on triple-click of the logo */
-@keyframes snowman-march {
-  0% {
-    transform: translateX(-100vw) rotate(0deg);
-  }
-  50% {
-    transform: translateX(50vw) rotate(180deg);
-  }
-  100% {
-    transform: translateX(120vw) rotate(360deg);
-  }
-}
-
-.snowman-party {
-  position: fixed;
-  bottom: 50%;
-  left: 0;
-  font-size: 3rem;
-  pointer-events: none;
-  z-index: 10001;
-  animation: snowman-march 8s linear forwards;
-}
-
-/* Cursor becomes a snowflake on Fridays (because why not) */
-@media (min-width: 768px) {
-  body.winter-friday {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">❄️</text></svg>'),
-      auto;
-  }
-
-  body.winter-friday button,
-  body.winter-friday a,
-  body.winter-friday [role='button'] {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">👆</text></svg>'),
-      pointer;
-  }
 }

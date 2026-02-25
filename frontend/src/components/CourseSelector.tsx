@@ -11,7 +11,7 @@ const STORAGE_KEY_GRADE = 'wiser_selected_grade';
 const STORAGE_KEY_PROJECT = 'wiser_selected_project';
 
 export function CourseSelector({onSelectionChange}: CourseSelectorProps) {
-  const {isAuthenticated, user} = useAuth();
+  const {isAuthenticated, user, token} = useAuth();
   const [formOptions, setFormOptions] = useState<FormOptions | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export function CourseSelector({onSelectionChange}: CourseSelectorProps) {
             `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013'}/user/preferences`,
             {
               headers: {
-                Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+                Authorization: `Bearer ${token}`,
               },
             },
           );
@@ -109,7 +109,7 @@ export function CourseSelector({onSelectionChange}: CourseSelectorProps) {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({
                 preferredGrade: selectedGrade,
@@ -130,9 +130,9 @@ export function CourseSelector({onSelectionChange}: CourseSelectorProps) {
 
   if (loading) {
     return (
-      <div className='px-6 md:px-10 lg:px-16 py-6 md:py-8 max-w-7xl mx-auto'>
-        <div className='bg-card border rounded-lg p-6 text-center'>
-          <div className='animate-pulse text-muted-foreground'>
+      <div className='px-4 md:px-10 lg:px-16 py-4 md:py-8 max-w-7xl mx-auto'>
+        <div className='bg-card border rounded-lg p-4 md:p-6 text-center'>
+          <div className='animate-pulse text-muted-foreground text-sm md:text-base'>
             Loading options...
           </div>
         </div>
@@ -142,9 +142,9 @@ export function CourseSelector({onSelectionChange}: CourseSelectorProps) {
 
   if (error || !formOptions) {
     return (
-      <div className='px-6 md:px-10 lg:px-16 py-6 md:py-8 max-w-7xl mx-auto'>
-        <div className='bg-destructive/10 border border-destructive rounded-lg p-6 text-center'>
-          <p className='text-destructive'>
+      <div className='px-4 md:px-10 lg:px-16 py-4 md:py-8 max-w-7xl mx-auto'>
+        <div className='bg-destructive/10 border border-destructive rounded-lg p-4 md:p-6 text-center'>
+          <p className='text-destructive text-sm md:text-base break-words'>
             {error || 'Failed to load selector options'}
           </p>
         </div>
@@ -159,68 +159,71 @@ export function CourseSelector({onSelectionChange}: CourseSelectorProps) {
       : [];
 
   return (
-    <div className='px-6 md:px-10 lg:px-16 py-6 md:py-8 max-w-7xl mx-auto'>
-      <div className='bg-card border rounded-lg p-6'>
-        <div className='flex flex-col md:flex-row items-start md:items-center gap-4'>
-          {/* Grade Dropdown */}
-          <div className='flex flex-col gap-2 min-w-[200px]'>
-            <label
-              htmlFor='grade-select'
-              className='text-sm font-semibold text-foreground/80'>
-              Select Year
-            </label>
-            <select
-              id='grade-select'
-              value={selectedGrade}
-              onChange={(e) => handleGradeSelect(e.target.value)}
-              className='px-4 py-2.5 bg-background border-2 border-border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all'>
-              <option value=''>Choose year...</option>
-              {formOptions.gradeOptions.map((option) => (
-                <option
-                  key={option.value}
-                  value={option.value}>
-                  {option.label}
+    <div className='px-4 md:px-10 lg:px-16 py-4 md:py-8 max-w-7xl mx-auto'>
+      <div className='bg-card border rounded-lg p-4 md:p-6 overflow-hidden'>
+        <div className='flex flex-col gap-4'>
+          {/* Dropdowns row - stack on mobile, horizontal on desktop */}
+          <div className='flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4'>
+            {/* Grade Dropdown */}
+            <div className='flex flex-col gap-2 flex-1 min-w-0'>
+              <label
+                htmlFor='grade-select'
+                className='text-sm font-semibold text-foreground/80'>
+                Select Year
+              </label>
+              <select
+                id='grade-select'
+                value={selectedGrade}
+                onChange={(e) => handleGradeSelect(e.target.value)}
+                className='w-full px-3 md:px-4 py-2.5 bg-background border-2 border-border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all truncate'>
+                <option value=''>Choose year...</option>
+                {formOptions.gradeOptions.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Project Dropdown - only enabled when grade is selected */}
+            <div className='flex flex-col gap-2 flex-1 min-w-0'>
+              <label
+                htmlFor='project-select'
+                className='text-sm font-semibold text-foreground/80'>
+                Select Project
+              </label>
+              <select
+                id='project-select'
+                value={selectedProject}
+                onChange={(e) => handleProjectSelect(e.target.value)}
+                disabled={!selectedGrade || availableProjects.length === 0}
+                className='w-full px-3 md:px-4 py-2.5 bg-background border-2 border-border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed truncate'>
+                <option value=''>
+                  {!selectedGrade
+                    ? 'Choose year first...'
+                    : availableProjects.length === 0
+                      ? 'No projects available'
+                      : 'Choose project...'}
                 </option>
-              ))}
-            </select>
+                {availableProjects.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Project Dropdown - only enabled when grade is selected */}
-          <div className='flex flex-col gap-2 min-w-[200px]'>
-            <label
-              htmlFor='project-select'
-              className='text-sm font-semibold text-foreground/80'>
-              Select Project
-            </label>
-            <select
-              id='project-select'
-              value={selectedProject}
-              onChange={(e) => handleProjectSelect(e.target.value)}
-              disabled={!selectedGrade || availableProjects.length === 0}
-              className='px-4 py-2.5 bg-background border-2 border-border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed'>
-              <option value=''>
-                {!selectedGrade
-                  ? 'Choose year first...'
-                  : availableProjects.length === 0
-                    ? 'No projects available'
-                    : 'Choose project...'}
-              </option>
-              {availableProjects.map((option) => (
-                <option
-                  key={option.value}
-                  value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Selection Summary */}
+          {/* Selection Summary - full width on mobile */}
           {selectedGrade && selectedProject && (
-            <div className='flex items-center gap-2 ml-auto'>
+            <div className='flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t'>
               <div className='text-sm text-muted-foreground'>Selected:</div>
-              <div className='px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-md'>
-                <span className='text-sm font-semibold text-primary'>
+              <div className='px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-md w-fit'>
+                <span className='text-sm font-semibold text-primary break-words'>
                   {
                     formOptions.gradeOptions.find(
                       (g) => g.value === selectedGrade,
