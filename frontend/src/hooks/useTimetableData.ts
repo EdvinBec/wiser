@@ -5,8 +5,10 @@ import {
   fetchClasses,
   fetchGroups,
   fetchLatestCheck,
+  fetchClassGroupMappings,
   type ClassInfo,
   type GroupInfo,
+  type ClassGroupMapping,
 } from '@/lib/api';
 import type {TimetableEvent} from '@/types/TimetableEvent';
 import {getAcademicWeekNumber} from '@/utils/academicCalendar';
@@ -16,7 +18,7 @@ interface UseTimetableDataParams {
   selectedDay: Date | null;
   selectedWeek: number | null;
   academicYear: number;
-  courseId: number;
+  courseId: number | null;
 }
 
 interface UseTimetableDataReturn {
@@ -25,6 +27,7 @@ interface UseTimetableDataReturn {
   error: string | null;
   classes: ClassInfo[];
   groups: GroupInfo[];
+  classGroupMappings: ClassGroupMapping[];
   latestCheck: number | null;
 }
 
@@ -44,10 +47,20 @@ export function useTimetableData({
   const [error, setError] = useState<string | null>(null);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
+  const [classGroupMappings, setClassGroupMappings] = useState<
+    ClassGroupMapping[]
+  >([]);
   const [latestCheck, setLatestCheck] = useState<number | null>(null);
 
   // Load events whenever the selection changes
   useEffect(() => {
+    // Skip fetching if no courseId is selected
+    if (!courseId) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     const load = async () => {
       setLoading(true);
@@ -97,16 +110,27 @@ export function useTimetableData({
 
   // Load classes and groups once on mount
   useEffect(() => {
+    // Skip fetching if no courseId is selected
+    if (!courseId) {
+      setClasses([]);
+      setGroups([]);
+      setClassGroupMappings([]);
+      setLatestCheck(null);
+      return;
+    }
+
     const controller = new AbortController();
     (async () => {
       try {
-        const [cs, gs, lc] = await Promise.all([
+        const [cs, gs, cgm, lc] = await Promise.all([
           fetchClasses(courseId, controller.signal),
           fetchGroups(courseId, controller.signal),
+          fetchClassGroupMappings(courseId, controller.signal),
           fetchLatestCheck(courseId, controller.signal),
         ]);
         setClasses(cs);
         setGroups(gs);
+        setClassGroupMappings(cgm);
         setLatestCheck(lc);
       } catch (e) {
         // Ignore abort errors from cleanup
@@ -124,6 +148,7 @@ export function useTimetableData({
     error,
     classes,
     groups,
+    classGroupMappings,
     latestCheck,
   };
 }

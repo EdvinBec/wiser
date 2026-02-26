@@ -128,6 +128,10 @@ export async function fetchDayTimetable(
 
 export type ClassInfo = {id: number; name: string};
 export type GroupInfo = {id: number; name: string};
+export type ClassGroupMapping = {
+  classId: number;
+  groupIds: number[];
+};
 
 export async function fetchClasses(
   courseId: number,
@@ -144,6 +148,15 @@ export async function fetchGroups(
 ): Promise<GroupInfo[]> {
   const res = await fetch(`${API_BASE}/groups/${courseId}`, {signal});
   if (!res.ok) throw new Error(`Failed groups fetch: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchClassGroupMappings(
+  courseId: number,
+  signal?: AbortSignal,
+): Promise<ClassGroupMapping[]> {
+  const res = await fetch(`${API_BASE}/class-groups/${courseId}`, {signal});
+  if (!res.ok) throw new Error(`Failed class-groups fetch: ${res.status}`);
   return res.json();
 }
 

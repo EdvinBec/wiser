@@ -1,4 +1,4 @@
-import {useEffect, useState, useMemo} from 'react';
+import {useEffect, useState, useMemo, useRef, useCallback} from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,13 +26,19 @@ import {useAcademicCalendar} from '@/hooks/useAcademicCalendar';
 import {useTimetableData} from '@/hooks/useTimetableData';
 import {useTimetableFilters} from '@/hooks/useTimetableFilters';
 import {toast} from 'sonner';
+import {CustomDropdown} from '@/components/CustomDropdown';
+import {fetchFormOptions} from '@/utils/api';
+import type {FormOptions} from '@/types/FormOptions';
+import {useAuth} from '@/contexts/AuthContext.shared';
 
 export function Timetable({
   courseId,
   headerTitle,
+  onSelectionChange,
 }: {
-  courseId: number;
+  courseId: number | null;
   headerTitle?: string;
+  onSelectionChange: (grade: string, project: string) => void;
 }) {
   // Navigation state (view, day, week selection)
   const {
@@ -52,14 +58,21 @@ export function Timetable({
     });
 
   // Data fetching
-  const {events, loading, error, classes, groups, latestCheck} =
-    useTimetableData({
-      selectedView,
-      selectedDay,
-      selectedWeek,
-      academicYear,
-      courseId,
-    });
+  const {
+    events,
+    loading,
+    error,
+    classes,
+    groups,
+    classGroupMappings,
+    latestCheck,
+  } = useTimetableData({
+    selectedView,
+    selectedDay,
+    selectedWeek,
+    academicYear,
+    courseId,
+  });
 
   // Filtering
   const {
@@ -78,10 +91,183 @@ export function Timetable({
     deserialize: (s) => s === 'dark',
   });
   const {t, locale, setLocale} = useI18n();
+  const {user, isAuthenticated, token} = useAuth();
 
   // Selected event for detail modal
   const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(
     null,
+  );
+
+  // Grade/Project selection state with database persistence when authenticated
+  const STORAGE_KEY_GRADE = 'wiser_selected_grade';
+  const STORAGE_KEY_PROJECT = 'wiser_selected_project';
+  const STORAGE_KEY_LAST_USER = 'wiser_last_user_id';
+  const [formOptions, setFormOptions] = useState<FormOptions | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const hasTriggeredInitialLoad = useRef(false);
+  const authInitialized = useRef(false);
+
+  // Load preferences on mount and when auth state changes
+  useEffect(() => {
+    const lastUserId = localStorage.getItem(STORAGE_KEY_LAST_USER);
+    const currentUserId = user?.id || null;
+
+    async function loadPreferences() {
+      // On first render or user change, mark as initialized
+      if (!authInitialized.current) {
+        authInitialized.current = true;
+      }
+
+      // Check if user changed
+      const userChanged = lastUserId !== currentUserId;
+      if (userChanged) {
+        hasTriggeredInitialLoad.current = false;
+
+        // Update last user tracker
+        if (currentUserId) {
+          localStorage.setItem(STORAGE_KEY_LAST_USER, currentUserId);
+        } else {
+          localStorage.removeItem(STORAGE_KEY_LAST_USER);
+        }
+      }
+
+      // Load preferences based on auth state
+      if (isAuthenticated && token) {
+        // Load from database for authenticated users
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013'}/user/preferences`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+          if (response.ok) {
+            const prefs = await response.json();
+            setSelectedGrade(prefs.preferredGrade || '');
+            setSelectedProject(prefs.preferredProject || '');
+          } else {
+            // Fallback to empty if API fails
+            setSelectedGrade('');
+            setSelectedProject('');
+          }
+        } catch (err) {
+          console.error('Failed to load user preferences from database:', err);
+          setSelectedGrade('');
+          setSelectedProject('');
+        }
+      } else {
+        // Load from localStorage for guest users
+        const storedGrade = localStorage.getItem(STORAGE_KEY_GRADE) || '';
+        const storedProject = localStorage.getItem(STORAGE_KEY_PROJECT) || '';
+        setSelectedGrade(storedGrade);
+        setSelectedProject(storedProject);
+      }
+    }
+
+    loadPreferences();
+  }, [user?.id, isAuthenticated, token]);
+
+  // Load form options on mount
+  useEffect(() => {
+    async function loadOptions() {
+      try {
+        const options = await fetchFormOptions();
+        setFormOptions(options);
+        setPreferencesLoaded(true);
+      } catch (err) {
+        console.error('Failed to fetch form options:', err);
+        setPreferencesLoaded(true);
+      }
+    }
+    loadOptions();
+  }, []);
+
+  // Auto-trigger selection if both grade and project are loaded from localStorage (only once on mount)
+  useEffect(() => {
+    if (
+      preferencesLoaded &&
+      !hasTriggeredInitialLoad.current &&
+      selectedGrade &&
+      selectedProject &&
+      formOptions
+    ) {
+      // Verify the project is valid for the selected grade
+      const validProjects = formOptions.projectsByGrade[selectedGrade] || [];
+      if (validProjects.some((p) => p.value === selectedProject)) {
+        hasTriggeredInitialLoad.current = true;
+        onSelectionChange(selectedGrade, selectedProject);
+      }
+    }
+  }, [
+    preferencesLoaded,
+    selectedGrade,
+    selectedProject,
+    formOptions,
+    onSelectionChange,
+  ]);
+
+  // Get available projects for selected grade
+  const availableProjects = useMemo(() => {
+    if (!selectedGrade || !formOptions) return [];
+    return formOptions.projectsByGrade[selectedGrade] || [];
+  }, [selectedGrade, formOptions]);
+
+  // Handle grade selection
+  const handleGradeChange = useCallback(
+    (grade: string) => {
+      setSelectedGrade(grade);
+      setSelectedProject(''); // Reset project when grade changes
+
+      // Save to localStorage for guest users
+      if (!isAuthenticated) {
+        localStorage.setItem(STORAGE_KEY_GRADE, grade);
+        localStorage.removeItem(STORAGE_KEY_PROJECT);
+      }
+    },
+    [isAuthenticated],
+  );
+
+  // Handle project selection
+  const handleProjectChange = useCallback(
+    async (project: string) => {
+      setSelectedProject(project);
+
+      if (selectedGrade && project) {
+        onSelectionChange(selectedGrade, project);
+
+        // Save preferences
+        if (isAuthenticated && token) {
+          // Save to database for authenticated users
+          try {
+            await fetch(
+              `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013'}/user/preferences`,
+              {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  preferredGrade: selectedGrade,
+                  preferredProject: project,
+                }),
+              },
+            );
+          } catch (err) {
+            console.error('Failed to save user preferences to database:', err);
+          }
+        } else {
+          // Save to localStorage for guest users
+          localStorage.setItem(STORAGE_KEY_GRADE, selectedGrade);
+          localStorage.setItem(STORAGE_KEY_PROJECT, project);
+        }
+      }
+    },
+    [selectedGrade, onSelectionChange, isAuthenticated, token],
   );
 
   // layout constants
@@ -125,19 +311,31 @@ export function Timetable({
   }, [classes, hasInitialFilters, setShowFilterModal]);
 
   // Check if data is stale (last check was more than 30 minutes ago)
+  // Re-check every minute to catch when data becomes stale
   useEffect(() => {
-    if (latestCheck != null) {
-      const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000; // 30 minutes
-      if (latestCheck < thirtyMinutesAgo) {
-        toast.error(
-          t.common.staleDataWarning ||
-            'Data might not be up to date. Last update was more than 30 minutes ago.',
-          {
-            duration: Infinity, // Stays until manually dismissed
-          },
-        );
+    const checkStaleData = () => {
+      if (latestCheck != null) {
+        const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000; // 30 minutes
+        if (latestCheck < thirtyMinutesAgo) {
+          toast.error(
+            t.common.staleDataWarning ||
+              'Data might not be up to date. Last update was more than 30 minutes ago.',
+            {
+              duration: Infinity, // Stays until manually dismissed
+              id: 'stale-data-warning', // Prevent duplicate toasts
+            },
+          );
+        }
       }
-    }
+    };
+
+    // Check immediately
+    checkStaleData();
+
+    // Then check every minute
+    const interval = setInterval(checkStaleData, 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [latestCheck, t.common.staleDataWarning]);
 
   // Apply theme to <html> element and persist
@@ -209,7 +407,7 @@ export function Timetable({
     : filteredEvents;
 
   return (
-    <div className='px-4 md:px-10 lg:px-16 py-4 md:py-8 max-w-7xl mx-auto overflow-x-hidden'>
+    <div className='px-4 md:px-10 lg:px-16 py-4 md:py-8 max-w-7xl mx-auto overflow-x-hidden overflow-y-visible'>
       {/* Header with brand and title */}
       <div className='mb-2 flex flex-col gap-3 border-b pb-4'>
         <div className='flex items-center justify-between gap-2 flex-wrap'>
@@ -256,6 +454,26 @@ export function Timetable({
       <div className='mt-3 flex flex-col gap-3 overflow-x-hidden'>
         {/* Buttons - wrap on small screens */}
         <div className='flex items-center gap-2 flex-wrap min-w-0'>
+          {/* Grade and Project Dropdowns */}
+          {formOptions && (
+            <>
+              <CustomDropdown
+                value={selectedGrade}
+                options={formOptions.gradeOptions}
+                onChange={handleGradeChange}
+                placeholder='Select Year'
+              />
+              <CustomDropdown
+                value={selectedProject}
+                options={availableProjects}
+                onChange={handleProjectChange}
+                placeholder='Select Project'
+                disabled={!selectedGrade || availableProjects.length === 0}
+              />
+              {/* Separator */}
+              <div className='hidden sm:block w-px h-6 bg-border' />
+            </>
+          )}
           <button
             onClick={() => setIsDark((v) => !v)}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-transparent hover:border-border hover:bg-muted text-sm ${
@@ -316,7 +534,7 @@ export function Timetable({
       )}
 
       {selectedView === 'day' ? (
-        <div className='relative flex h-full w-full mt-2 md:mt-4 overflow-x-auto'>
+        <div className='relative flex h-full w-full mt-2 md:mt-4 overflow-x-auto overflow-y-visible'>
           <TimeAxis
             hours={hours}
             hourHeight={HOUR_HEIGHT}
@@ -357,20 +575,20 @@ export function Timetable({
 
             return (
               <div
-                className='pointer-events-none absolute inset-x-0 z-30'
-                style={{top}}>
+                className='pointer-events-none absolute inset-x-0 z-50 overflow-visible'
+                style={{top, transform: 'translateY(-50%)'}}>
                 {/* Red line across the schedule */}
-                <div className='absolute left-12 md:left-16 right-0 h-0 border-t-2 border-red-500' />
+                <div className='absolute left-12 md:left-16 right-0 h-0 border-t-2 border-red-500 z-30' />
 
-                {/* Time label on the left - above time axis */}
-                <div className='absolute left-0 w-12 md:w-16 -translate-y-1/2 flex items-center justify-center z-40'>
+                {/* Time label on the left - centered on the line */}
+                <div className='absolute left-0 top-px w-12 md:w-16 -translate-y-1/2 flex items-center justify-center z-40'>
                   <span className='bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg'>
                     {nowLabel()}
                   </span>
                 </div>
 
-                {/* Red dot at the start of the line */}
-                <div className='absolute left-12 md:left-16 w-2 h-2 bg-red-500 rounded-full -translate-x-1/2 -translate-y-1/2' />
+                {/* Red dot at the start of the line - positioned to be centered on the 2px border */}
+                <div className='absolute left-12 md:left-16 top-px w-2 h-2 bg-red-500 rounded-full -translate-x-1/2 -translate-y-1/2 z-[100]' />
               </div>
             );
           })()}
@@ -395,57 +613,39 @@ export function Timetable({
         onClose={() => setSelectedEvent(null)}
       />
 
-      {/* Filter classes to only show those with 2+ exercise groups */}
+      {/* Filter modal for group selection */}
       {useMemo(() => {
-        // For each class, find unique exercise groups (not lectures)
-        const classGroupMap = new Map<number, Set<number>>();
+        // Filter out classes that only have "PR" groups (lecture markers) or don't have multiple groups
+        const filterableClasses = classes.filter((c) => {
+          const mapping = classGroupMappings.find((m) => m.classId === c.id);
+          if (!mapping || mapping.groupIds.length < 2) return false;
 
-        events.forEach((event) => {
-          // Only consider non-lecture events (exercises)
-          if (event.type !== 'Lecture') {
-            if (!classGroupMap.has(event.classId)) {
-              classGroupMap.set(event.classId, new Set());
-            }
-            classGroupMap.get(event.classId)!.add(event.groupId);
-          }
-        });
+          // Get the actual group names for this class
+          const classGroups = groups.filter((g) =>
+            mapping.groupIds.includes(g.id),
+          );
 
-        // Only include classes with 2+ unique exercise groups
-        const filterableClassIds = new Set<number>();
-        classGroupMap.forEach((groupIds, classId) => {
-          if (groupIds.size >= 2) {
-            filterableClassIds.add(classId);
-          }
-        });
+          // Filter out empty names and check if all remaining groups are just "PR"
+          const nonEmptyGroups = classGroups.filter((g) => {
+            const name = (g.name ?? '').trim().toUpperCase();
+            return name !== '';
+          });
 
-        const filteredClasses = classes.filter((c) =>
-          filterableClassIds.has(c.id),
-        );
+          // If all groups are "PR", exclude this class from filters
+          const allPR = nonEmptyGroups.every((g) => {
+            const name = (g.name ?? '').trim().toUpperCase();
+            return name === 'PR';
+          });
 
-        // Filter groups to only those in filterable classes and not "PR" groups
-        const filteredGroups = groups.filter((g) => {
-          const groupName = (g.name ?? '').trim().toUpperCase();
-          // Exclude PR groups (lecture markers)
-          if (groupName === 'PR') return false;
-
-          // Check if this group belongs to any filterable class
-          for (const event of events) {
-            if (
-              event.groupId === g.id &&
-              filterableClassIds.has(event.classId) &&
-              event.type !== 'Lecture'
-            ) {
-              return true;
-            }
-          }
-          return false;
+          return !allPR && nonEmptyGroups.length >= 2;
         });
 
         return (
           <OnboardingFiltersModal
             open={showFilterModal}
-            classes={filteredClasses}
-            groups={filteredGroups}
+            classes={filterableClasses}
+            groups={groups}
+            classGroupMappings={classGroupMappings}
             initial={groupFilter}
             onClose={() => setShowFilterModal(false)}
             onSave={(sel) => {
@@ -458,7 +658,7 @@ export function Timetable({
         showFilterModal,
         classes,
         groups,
-        events,
+        classGroupMappings,
         groupFilter,
         setGroupFilter,
         setShowFilterModal,

@@ -518,6 +518,8 @@ public class ExcelFetcherService : IAsyncLifetime
             {
                 File.Delete(tempPath);
                 fileWasUpdated = false;
+                await _logger.LogAsync(LogLevel.Information, 
+                    $"Excel file unchanged for {courseCode}-{grade}-{project}, skipping database update");
             }
             else
             {
@@ -529,16 +531,25 @@ public class ExcelFetcherService : IAsyncLifetime
 
                 File.Replace(tempPath, finalPath, backupPath);
                 File.Delete(backupPath);
+                await _logger.LogAsync(LogLevel.Information, 
+                    $"Excel file updated for {courseCode}-{grade}-{project}");
             }
         }
         else
         {
             File.Move(tempPath, finalPath);
+            await _logger.LogAsync(LogLevel.Information, 
+                $"New Excel file downloaded for {courseCode}-{grade}-{project}");
         }
 
-        // Always fire both events - ExcelFetched for timestamp update, ExcelFileUpdated for parsing
+        // Always fire ExcelFetched for timestamp update
         ExcelFetched?.Invoke(this, new ExcelFetchedEventArgs(DateTimeOffset.Now, courseCode, grade, project));
-        ExcelFileUpdated?.Invoke(this, new ExcelDownloadedEventArgs(finalPath, courseCode, grade, project, groupName));
+        
+        // Only fire ExcelFileUpdated (triggers database update) if file content actually changed
+        if (fileWasUpdated)
+        {
+            ExcelFileUpdated?.Invoke(this, new ExcelDownloadedEventArgs(finalPath, courseCode, grade, project, groupName));
+        }
     }
 
     private async Task CaptureScreenshotOnError(IPage page, string courseCode, int grade, string project, string errorType)

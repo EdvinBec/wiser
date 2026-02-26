@@ -119,6 +119,25 @@ public class TimetableController : ControllerBase
         return Ok(classes);
     }
     
+    [HttpGet("class-groups/{courseId:int}")]
+    public async Task<IActionResult> GetClassGroupMappings(int courseId)
+    {
+        // Get all unique class-group pairs from sessions for this course
+        var mappings = await _database.Sessions
+            .Where(s => s.CourseId == courseId)
+            .Select(s => new { s.ClassId, s.GroupId })
+            .Distinct()
+            .GroupBy(x => x.ClassId)
+            .Select(g => new 
+            {
+                ClassId = g.Key,
+                GroupIds = g.Select(x => x.GroupId).Distinct().ToList()
+            })
+            .ToListAsync();
+
+        return Ok(mappings);
+    }
+    
     [HttpGet("instructors")]
     public async Task<IActionResult> GetInstructors()
     {
