@@ -54,3 +54,7 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Excel files and screenshots
+backend/backend/Data/ExcelFiles/*.xls
+backend/backend/Data/ExcelFiles/screenshots/*.png
