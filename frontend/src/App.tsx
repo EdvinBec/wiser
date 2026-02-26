@@ -1,7 +1,6 @@
 import './App.css';
 import {useState, useCallback} from 'react';
 import {Timetable} from './container/Timetable';
-import {SiteHeader} from './components/SiteHeader';
 import {WelcomeModal} from './components/WelcomeModal';
 import {fetchCourseId} from './utils/api';
 
@@ -27,7 +26,6 @@ function App() {
 
   return (
     <>
-      <SiteHeader />
       <WelcomeModal />
 
       {/* Timetable with integrated selection */}

@@ -9,32 +9,36 @@ export function LoginButton() {
 
   if (isAuthenticated && user) {
     return (
-      <div className='flex items-center gap-2 sm:gap-3'>
+      <div className='flex items-center gap-1.5 sm:gap-2'>
         {/* Avatar - always visible */}
         {user.avatarUrl ? (
           <img
             src={user.avatarUrl}
             alt={user.displayName || user.email}
-            className='w-8 h-8 sm:w-9 sm:h-9 rounded-full cursor-pointer hover:opacity-80 transition-opacity'
-            title='Settings (coming soon)'
+            className='w-7 h-7 sm:w-8 sm:h-8 rounded-full cursor-pointer hover:opacity-80 transition-opacity'
+            title={user.displayName || user.email}
           />
         ) : (
-          <div className='w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors'>
-            <User size={16} />
+          <div className='w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors'>
+            <User size={14} />
           </div>
         )}
 
-        {/* Name - hidden on mobile */}
-        <span className='hidden sm:inline font-medium text-foreground text-sm'>
-          {user.displayName || user.email}
+        {/* User name - hidden on small screens, visible when there's room */}
+        <span className='hidden md:inline text-sm font-medium text-foreground'>
+          {user.displayName || user.email.split('@')[0]}
         </span>
 
-        {/* Logout button */}
+        {/* Logout button - icon only on mobile, with text on larger screens */}
         <button
           onClick={logout}
-          className='flex items-center gap-2 px-3 py-2 sm:px-4 rounded-lg border border-border hover:bg-muted transition-colors min-h-[44px]'
-          aria-label='Logout'>
-          <LogOut size={18} />
+          className='flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md border border-border hover:bg-muted transition-colors text-xs sm:text-sm'
+          aria-label='Logout'
+          title='Logout'>
+          <LogOut
+            size={14}
+            className='sm:w-4 sm:h-4'
+          />
           <span className='hidden sm:inline'>Logout</span>
         </button>
       </div>
@@ -45,9 +49,13 @@ export function LoginButton() {
     <>
       <button
         onClick={() => setShowAuthModal(true)}
-        className='flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors'
-        aria-label='Login'>
-        <LogIn size={18} />
+        className='flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-xs sm:text-sm'
+        aria-label='Login'
+        title='Login'>
+        <LogIn
+          size={14}
+          className='sm:w-4 sm:h-4'
+        />
         <span>Login</span>
       </button>
       <AuthModal

@@ -122,9 +122,10 @@ public class TimetableController : ControllerBase
     [HttpGet("class-groups/{courseId:int}")]
     public async Task<IActionResult> GetClassGroupMappings(int courseId)
     {
-        // Get all unique class-group pairs from sessions for this course
+        // Get all unique class-group pairs from non-lecture sessions for this course
+        // This ensures only classes with exercises/labs/etc are shown in filters, not lecture-only classes
         var mappings = await _database.Sessions
-            .Where(s => s.CourseId == courseId)
+            .Where(s => s.CourseId == courseId && s.Type != backend.Models.Enums.SessionType.Lecture)
             .Select(s => new { s.ClassId, s.GroupId })
             .Distinct()
             .GroupBy(x => x.ClassId)

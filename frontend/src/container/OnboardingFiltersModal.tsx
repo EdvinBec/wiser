@@ -52,10 +52,29 @@ export function OnboardingFiltersModal({
         // Must be in the class-group mapping
         if (!allowedGroupIds.has(g.id)) return false;
 
-        // Filter out empty names, unwanted groups, and PR groups (lecture markers)
+        // Filter out empty names and invalid/unwanted groups
         const n = (g.name ?? '').trim();
+        if (n === '') return false;
+
         const nUpper = n.toUpperCase();
-        return n !== '' && n !== 'RIT 2' && nUpper !== 'PR';
+
+        // Filter out PR (lecture marker)
+        if (nUpper === 'PR') return false;
+
+        // Filter out various forms of RIT 2 (invalid group)
+        const isRIT2 =
+          nUpper === 'RIT 2' ||
+          nUpper === 'R_IT 2' ||
+          nUpper === 'R-IT 2' ||
+          nUpper === 'RIT2' ||
+          nUpper === 'R_IT2' ||
+          nUpper === 'R-IT2' ||
+          nUpper.startsWith('RIT') ||
+          nUpper.startsWith('R_IT') ||
+          nUpper.startsWith('R-IT');
+        if (isRIT2) return false;
+
+        return true;
       })
       .map((g) => ({id: g.id, name: g.name}));
   };

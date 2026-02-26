@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import {RoundedButton} from '@/components/RoundedButton';
 import {Brand} from '@/components/Brand';
+import {LoginButton} from '@/components/LoginButton';
 import {TimetableHeader} from './TimetableHeader.tsx';
 import {TimeAxis} from './TimeAxis.tsx';
 import {WeekGrid} from './WeekGrid';
@@ -147,8 +148,19 @@ export function Timetable({
           );
           if (response.ok) {
             const prefs = await response.json();
-            setSelectedGrade(prefs.preferredGrade || '');
-            setSelectedProject(prefs.preferredProject || '');
+            const loadedGrade = prefs.preferredGrade || '';
+            const loadedProject = prefs.preferredProject || '';
+            setSelectedGrade(loadedGrade);
+            setSelectedProject(loadedProject);
+
+            // If both grade and project exist, trigger the selection immediately
+            if (loadedGrade && loadedProject && formOptions) {
+              const validProjects =
+                formOptions.projectsByGrade[loadedGrade] || [];
+              if (validProjects.some((p) => p.value === loadedProject)) {
+                onSelectionChange(loadedGrade, loadedProject);
+              }
+            }
           } else {
             // Fallback to empty if API fails
             setSelectedGrade('');
@@ -165,11 +177,19 @@ export function Timetable({
         const storedProject = localStorage.getItem(STORAGE_KEY_PROJECT) || '';
         setSelectedGrade(storedGrade);
         setSelectedProject(storedProject);
+
+        // If both grade and project exist, trigger the selection immediately
+        if (storedGrade && storedProject && formOptions) {
+          const validProjects = formOptions.projectsByGrade[storedGrade] || [];
+          if (validProjects.some((p) => p.value === storedProject)) {
+            onSelectionChange(storedGrade, storedProject);
+          }
+        }
       }
     }
 
     loadPreferences();
-  }, [user?.id, isAuthenticated, token]);
+  }, [user?.id, isAuthenticated, token, formOptions, onSelectionChange]);
 
   // Load form options on mount
   useEffect(() => {
@@ -417,6 +437,10 @@ export function Timetable({
               {headerTitle}
             </span>
           </div>
+          {/* Login button in top right - subtle placement */}
+          <div className='flex items-center'>
+            <LoginButton />
+          </div>
         </div>
 
         {/* Event type indicators - separate row on mobile, same line on larger screens */}
@@ -615,29 +639,44 @@ export function Timetable({
 
       {/* Filter modal for group selection */}
       {useMemo(() => {
-        // Filter out classes that only have "PR" groups (lecture markers) or don't have multiple groups
+        // Filter classes to only show those with multiple valid groups
         const filterableClasses = classes.filter((c) => {
           const mapping = classGroupMappings.find((m) => m.classId === c.id);
-          if (!mapping || mapping.groupIds.length < 2) return false;
+          if (!mapping) return false;
 
           // Get the actual group names for this class
           const classGroups = groups.filter((g) =>
             mapping.groupIds.includes(g.id),
           );
 
-          // Filter out empty names and check if all remaining groups are just "PR"
-          const nonEmptyGroups = classGroups.filter((g) => {
-            const name = (g.name ?? '').trim().toUpperCase();
-            return name !== '';
+          // Filter out invalid groups (empty, PR, RIT variations)
+          const validGroups = classGroups.filter((g) => {
+            const name = (g.name ?? '').trim();
+            if (name === '') return false;
+
+            const nameUpper = name.toUpperCase();
+
+            // Filter out PR
+            if (nameUpper === 'PR') return false;
+
+            // Filter out RIT 2 variations
+            const isRIT2 =
+              nameUpper === 'RIT 2' ||
+              nameUpper === 'R_IT 2' ||
+              nameUpper === 'R-IT 2' ||
+              nameUpper === 'RIT2' ||
+              nameUpper === 'R_IT2' ||
+              nameUpper === 'R-IT2' ||
+              nameUpper.startsWith('RIT') ||
+              nameUpper.startsWith('R_IT') ||
+              nameUpper.startsWith('R-IT');
+            if (isRIT2) return false;
+
+            return true;
           });
 
-          // If all groups are "PR", exclude this class from filters
-          const allPR = nonEmptyGroups.every((g) => {
-            const name = (g.name ?? '').trim().toUpperCase();
-            return name === 'PR';
-          });
-
-          return !allPR && nonEmptyGroups.length >= 2;
+          // Only show classes with 2+ valid groups
+          return validGroups.length >= 2;
         });
 
         return (
