@@ -33,33 +33,52 @@ export function TimetableEventBlock({
       onClick={() => onClick?.(ev)}
     >
       <div
-        className={`w-full h-full p-1 sm:p-2 space-y-0.5 sm:space-y-1 rounded-sm hover:brightness-95 transition-all overflow-hidden ${c.bg} ${c.text} ${c.darkBg} ${c.darkText}`}
+        className={`w-full h-full p-1.5 sm:p-1.5 space-y-0.5 rounded-sm hover:brightness-95 transition-all overflow-hidden ${c.bg} ${c.text} ${c.darkBg} ${c.darkText}`}
       >
-        <h2 className="text-[10px] sm:text-xs md:text-sm font-bold line-clamp-2 leading-tight">
+        <h2 className="text-sm sm:text-xs md:text-sm font-bold line-clamp-2 leading-tight">
           {ev.className}
         </h2>
-        <div className="flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-medium truncate">
+        <div className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-xs font-medium truncate">
           <Tags size={12} strokeWidth={1.5} className="flex-shrink-0" />
           <p className="truncate">{t.types[ev.type]}</p>
         </div>
-        <div className="flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-light truncate">
+        <div className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-xs font-light truncate">
           <Clock size={12} strokeWidth={1.5} className="flex-shrink-0" />
           <p className="truncate">
             {ljTimeFmt.format(ev.startAt)}–{ljTimeFmt.format(ev.finishAt)}
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-1 text-xs font-light truncate">
-          <GraduationCap size={12} strokeWidth={1.5} className="flex-shrink-0" />
-          <p className="truncate">{ev.instructorName}</p>
-        </div>
-        <div className="flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-light truncate">
-          <MapPin size={12} strokeWidth={1.5} className="flex-shrink-0" />
-          <p className="truncate">{ev.roomName}</p>
-        </div>
-        <div className="hidden sm:flex items-center gap-1 text-xs font-light truncate">
-          <UsersRound size={12} strokeWidth={1.5} className="flex-shrink-0" />
-          <p className="truncate">{ev.groupName}</p>
-        </div>
+        {ev.type === "ComputerExercise" ? (
+          <>
+            <div className="hidden sm:flex items-center gap-1 text-xs font-light truncate">
+              <UsersRound size={12} strokeWidth={1.5} className="flex-shrink-0" />
+              <p className="truncate">{ev.groupName}</p>
+            </div>
+            <div className="flex items-center gap-0.5 sm:gap-1 text-xs font-light truncate">
+              <MapPin size={12} strokeWidth={1.5} className="flex-shrink-0" />
+              <p className="truncate">{ev.roomName}</p>
+            </div>
+            <div className="hidden sm:flex items-center gap-1 text-xs font-light truncate">
+              <GraduationCap size={12} strokeWidth={1.5} className="flex-shrink-0" />
+              <p className="truncate">{ev.instructorName}</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="hidden sm:flex items-center gap-1 text-xs font-light truncate">
+              <GraduationCap size={12} strokeWidth={1.5} className="flex-shrink-0" />
+              <p className="truncate">{ev.instructorName}</p>
+            </div>
+            <div className="flex items-center gap-0.5 sm:gap-1 text-xs font-light truncate">
+              <MapPin size={12} strokeWidth={1.5} className="flex-shrink-0" />
+              <p className="truncate">{ev.roomName}</p>
+            </div>
+            <div className="hidden sm:flex items-center gap-1 text-xs font-light truncate">
+              <UsersRound size={12} strokeWidth={1.5} className="flex-shrink-0" />
+              <p className="truncate">{ev.groupName}</p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

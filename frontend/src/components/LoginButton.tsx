@@ -1,45 +1,25 @@
 import {useState} from 'react';
-import {LogIn, LogOut, User} from 'lucide-react';
+import {LogIn, LogOut} from 'lucide-react';
 import {useAuth} from '@/contexts/AuthContext.shared';
 import {AuthModal} from '@/components/AuthModal';
+import {useI18n} from '@/lib/i18n';
 
 export function LoginButton() {
+  const {t} = useI18n();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const {user, logout, isAuthenticated} = useAuth();
 
   if (isAuthenticated && user) {
+    const name = user.displayName || user.email.split('@')[0];
     return (
-      <div className='flex items-center gap-1.5 sm:gap-2'>
-        {/* Avatar - always visible */}
-        {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt={user.displayName || user.email}
-            className='w-7 h-7 sm:w-8 sm:h-8 rounded-full cursor-pointer hover:opacity-80 transition-opacity'
-            title={user.displayName || user.email}
-          />
-        ) : (
-          <div className='w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors'>
-            <User size={14} />
-          </div>
-        )}
-
-        {/* User name - hidden on small screens, visible when there's room */}
-        <span className='hidden md:inline text-sm font-medium text-foreground'>
-          {user.displayName || user.email.split('@')[0]}
-        </span>
-
-        {/* Logout button - icon only on mobile, with text on larger screens */}
+      <div className='flex items-center gap-1.5'>
+        <span className='text-xs font-semibold text-foreground max-w-[100px] truncate'>{name}</span>
         <button
           onClick={logout}
-          className='flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md border border-border hover:bg-muted transition-colors text-xs sm:text-sm'
-          aria-label='Logout'
-          title='Logout'>
-          <LogOut
-            size={14}
-            className='sm:w-4 sm:h-4'
-          />
-          <span className='hidden sm:inline'>Logout</span>
+          aria-label={t.auth.signIn}
+          title={t.auth.signIn}
+          className='p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors'>
+          <LogOut size={14} />
         </button>
       </div>
     );
@@ -49,14 +29,11 @@ export function LoginButton() {
     <>
       <button
         onClick={() => setShowAuthModal(true)}
-        className='flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-xs sm:text-sm'
-        aria-label='Login'
-        title='Login'>
-        <LogIn
-          size={14}
-          className='sm:w-4 sm:h-4'
-        />
-        <span>Login</span>
+        aria-label={t.auth.signIn}
+        title={t.auth.signIn}
+        className='flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-xs text-primary hover:bg-primary/10 transition-colors'>
+        <LogIn size={14} />
+        <span>{t.auth.signIn}</span>
       </button>
       <AuthModal
         open={showAuthModal}

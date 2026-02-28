@@ -11,6 +11,7 @@ export type Locale = "en" | "sl";
 
 type Dict = {
   common: {
+    select: string;
     manageFilters: string;
     save: string;
     cancel: string;
@@ -31,12 +32,38 @@ type Dict = {
     timetable: string;
     latestCheckLabel: string;
     staleDataWarning: string;
+    selectYearAndProject: string;
+    selectProject: string;
   };
   header: {
     showBy: string;
     day: string;
     week: string;
     weekLabel: string;
+    year: string;
+    project: string;
+  };
+  auth: {
+    login: string;
+    loginSubtitle: string;
+    register: string;
+    registerSubtitle: string;
+    continueWithGoogle: string;
+    or: string;
+    name: string;
+    namePlaceholder: string;
+    email: string;
+    password: string;
+    passwordHint: string;
+    confirmPassword: string;
+    continue: string;
+    signingIn: string;
+    creatingAccount: string;
+    noAccount: string;
+    signUp: string;
+    haveAccount: string;
+    signIn: string;
+    continueAsGuest: string;
   };
   details: {
     type: string;
@@ -52,6 +79,7 @@ type Dict = {
 const dicts: Record<Locale, Dict> = {
   en: {
     common: {
+      select: "Select",
       manageFilters: "Manage filters",
       save: "Save",
       cancel: "Cancel",
@@ -73,12 +101,38 @@ const dicts: Record<Locale, Dict> = {
       timetable: " timetable and is not affiliated with Wise Technologies.",
       latestCheckLabel: "Latest check",
       staleDataWarning: "Data might not be up to date. Last update was more than 30 minutes ago.",
+      selectYearAndProject: "Select a year and project to view the timetable.",
+      selectProject: "Select a project to view the timetable.",
     },
     header: {
       showBy: "Show by:",
       day: "Day",
       week: "Week",
       weekLabel: "Week",
+      year: "Year",
+      project: "Project",
+    },
+    auth: {
+      login: "Log in",
+      loginSubtitle: "Welcome back. Sign in to continue.",
+      register: "Create an account",
+      registerSubtitle: "Get started for free.",
+      continueWithGoogle: "Continue with Google",
+      or: "or",
+      name: "Name",
+      namePlaceholder: "Your name",
+      email: "Email",
+      password: "Password",
+      passwordHint: "Uppercase, lowercase, number & special character",
+      confirmPassword: "Confirm password",
+      continue: "Continue",
+      signingIn: "Signing in…",
+      creatingAccount: "Creating account…",
+      noAccount: "No account?",
+      signUp: "Sign up",
+      haveAccount: "Already have an account?",
+      signIn: "Log in",
+      continueAsGuest: "Continue as guest →",
     },
     details: {
       type: "Type",
@@ -103,6 +157,7 @@ const dicts: Record<Locale, Dict> = {
   },
   sl: {
     common: {
+      select: "Izberi",
       manageFilters: "Upravljaj filtre",
       save: "Shrani",
       cancel: "Prekliči",
@@ -124,12 +179,38 @@ const dicts: Record<Locale, Dict> = {
       timetable: "urnika in ni povezana s podjetjem Wise Technologies.",
       latestCheckLabel: "Zadnji zajem",
       staleDataWarning: "Podatki morda niso najnovejši. Zadnja posodobitev je bila pred več kot 30 minutami.",
+      selectYearAndProject: "Izberi letnik in smer za prikaz urnika.",
+      selectProject: "Izberi smer za prikaz urnika.",
     },
     header: {
       showBy: "Prikaz:",
       day: "Dan",
       week: "Teden",
       weekLabel: "Teden",
+      year: "Letnik",
+      project: "Smer",
+    },
+    auth: {
+      login: "Prijava",
+      loginSubtitle: "Dobrodošli. Prijavite se za nadaljevanje.",
+      register: "Ustvari račun",
+      registerSubtitle: "Začnite brezplačno.",
+      continueWithGoogle: "Nadaljuj z Google",
+      or: "ali",
+      name: "Ime",
+      namePlaceholder: "Vaše ime",
+      email: "E-pošta",
+      password: "Geslo",
+      passwordHint: "Velika, mala, številka in poseben znak",
+      confirmPassword: "Potrdi geslo",
+      continue: "Nadaljuj",
+      signingIn: "Prijavljanje…",
+      creatingAccount: "Ustvarjanje računa…",
+      noAccount: "Nimaš računa?",
+      signUp: "Registracija",
+      haveAccount: "Že imaš račun?",
+      signIn: "Prijava",
+      continueAsGuest: "Nadaljuj kot gost →",
     },
     details: {
       type: "Vrsta",

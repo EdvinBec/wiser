@@ -1,67 +1,84 @@
-import { useLocalStorageState } from "./useLocalStorageState";
-import { getAcademicWeekNumber } from "@/utils/academicCalendar";
+import {useLocalStorageState} from './useLocalStorageState';
+import {getAcademicWeekNumber} from '@/utils/academicCalendar';
 
 const LS = {
-  view: "timetableSelectedViewV2",
-  day: "timetableSelectedDayV2",
-  week: "timetableSelectedWeekV2",
+  view: 'timetableSelectedViewV2',
+  day: 'timetableSelectedDayV2',
+  week: 'timetableSelectedWeekV2',
 } as const;
 
 interface UseTimetableNavigationReturn {
-  selectedView: "day" | "week";
-  setSelectedView: (view: "day" | "week" | ((prev: "day" | "week") => "day" | "week")) => void;
+  selectedView: 'day' | 'week';
+  setSelectedView: (
+    view: 'day' | 'week' | ((prev: 'day' | 'week') => 'day' | 'week'),
+  ) => void;
   selectedDay: Date | null;
-  setSelectedDay: (day: Date | null | ((prev: Date | null) => Date | null)) => void;
+  setSelectedDay: (
+    day: Date | null | ((prev: Date | null) => Date | null),
+  ) => void;
   selectedWeek: number | null;
-  setSelectedWeek: (week: number | null | ((prev: number | null) => number | null)) => void;
+  setSelectedWeek: (
+    week: number | null | ((prev: number | null) => number | null),
+  ) => void;
 }
 
-/**
- * Custom hook for managing timetable navigation state (view, day, week).
- * Handles view switching and date selection with localStorage persistence.
- *
- * Default behavior:
- * - View defaults to "day"
- * - Always resets to today's date/week on page load
- */
 export function useTimetableNavigation(): UseTimetableNavigationReturn {
-  // View preference persists (defaults to "day")
-  const [selectedView, setSelectedView] = useLocalStorageState<"day" | "week">(
+  const [selectedView, setSelectedView] = useLocalStorageState<'day' | 'week'>(
     LS.view,
-    "day", // Always default to day view
+    () => {
+      // On first visit (no localStorage), still respect URL param
+      const urlV = new URLSearchParams(window.location.search).get('v');
+      if (urlV === 'day' || urlV === 'week') return urlV;
+      return 'day';
+    },
     {
-      legacyKeys: ["timetableSelectedViewV1"],
+      legacyKeys: ['timetableSelectedViewV1'],
       serialize: (v) => v,
-      deserialize: (v) => (v === "day" || v === "week" ? v : "day"),
-    }
+      deserialize: (stored) => {
+        // URL param takes priority over localStorage
+        const urlV = new URLSearchParams(window.location.search).get('v');
+        if (urlV === 'day' || urlV === 'week') return urlV;
+        return stored === 'day' || stored === 'week' ? stored : 'day';
+      },
+    },
   );
 
-  // Day always resets to today on page load (not persisted from localStorage)
   const [selectedDay, setSelectedDay] = useLocalStorageState<Date | null>(
     LS.day,
-    () => new Date(), // Always start with today
+    () => {
+      const urlD = new URLSearchParams(window.location.search).get('d');
+      // Parse as local noon to avoid UTC midnight shifting the date across timezone boundaries
+      if (urlD) return new Date(urlD + 'T12:00:00');
+      return new Date();
+    },
     {
-      legacyKeys: ["timetableSelectedDayV1"],
-      serialize: (d) => (d ? d.toISOString() : ""),
+      legacyKeys: ['timetableSelectedDayV1'],
+      serialize: (d) => (d ? d.toISOString() : ''),
       deserialize: (_s) => {
-        // Ignore persisted value, always use today
+        const urlD = new URLSearchParams(window.location.search).get('d');
+        // Parse as local noon to avoid UTC midnight shifting the date across timezone boundaries
+        if (urlD) return new Date(urlD + 'T12:00:00');
         return new Date();
       },
-    }
+    },
   );
 
-  // Week always resets to current week on page load
   const [selectedWeek, setSelectedWeek] = useLocalStorageState<number | null>(
     LS.week,
-    () => getAcademicWeekNumber(new Date()), // Always start with current week
+    () => {
+      const urlW = new URLSearchParams(window.location.search).get('w');
+      if (urlW) return Number(urlW);
+      return getAcademicWeekNumber(new Date());
+    },
     {
-      legacyKeys: ["timetableSelectedWeekV1"],
-      serialize: (n) => (n !== null ? String(n) : ""),
+      legacyKeys: ['timetableSelectedWeekV1'],
+      serialize: (n) => (n !== null ? String(n) : ''),
       deserialize: (_s) => {
-        // Ignore persisted value, always use current week
+        const urlW = new URLSearchParams(window.location.search).get('w');
+        if (urlW) return Number(urlW);
         return getAcademicWeekNumber(new Date());
       },
-    }
+    },
   );
 
   return {

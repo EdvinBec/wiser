@@ -174,7 +174,97 @@ export async function fetchLatestCheck(
   return Number.isNaN(ms) ? null : ms;
 }
 
+// ---------------------------------------------------------------------------
+// Generic API client and user/auth functions
+// ---------------------------------------------------------------------------
+
+const API_HOST = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013';
+
+async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_HOST}${path}`, init);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as Record<string, unknown>).message as string ||
+        `Request failed: ${res.status}`,
+    );
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json();
+}
+
+export async function getUserPreferences(
+  token: string,
+): Promise<{preferredGrade?: string; preferredProject?: string}> {
+  return apiClient('/user/preferences', {
+    headers: {Authorization: `Bearer ${token}`},
+  });
+}
+
+export async function saveUserPreferences(
+  token: string,
+  grade: string,
+  project: string,
+): Promise<void> {
+  return apiClient('/user/preferences', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({preferredGrade: grade, preferredProject: project}),
+  });
+}
+
+export async function getUserFilters(
+  token: string,
+): Promise<{groupFilters?: string}> {
+  return apiClient('/user/filters', {
+    headers: {Authorization: `Bearer ${token}`},
+  });
+}
+
+export async function saveUserFilters(
+  token: string,
+  filters: Record<string, number[]>,
+): Promise<void> {
+  return apiClient('/user/filters', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({groupFilters: JSON.stringify(filters)}),
+  });
+}
+
+export async function loginWithEmail(
+  email: string,
+  password: string,
+): Promise<{token: string}> {
+  return apiClient('/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password}),
+  });
+}
+
+export async function registerWithEmail(
+  name: string,
+  email: string,
+  password: string,
+): Promise<{token: string}> {
+  return apiClient('/auth/register', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, email, password}),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Legacy/stub functions for backward compatibility with unused components
+// ---------------------------------------------------------------------------
+
 export type Group = {id: number; name: string};
 export type Course = {id: number; code: string; name: string};
 

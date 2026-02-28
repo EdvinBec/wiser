@@ -10,6 +10,7 @@ interface CustomDropdownProps {
   value: string;
   options: DropdownOption[];
   onChange: (value: string) => void;
+  label?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -19,6 +20,7 @@ export function CustomDropdown({
   value,
   options,
   onChange,
+  label,
   placeholder = 'Select...',
   disabled = false,
   className = '',
@@ -26,13 +28,8 @@ export function CustomDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-  });
+  const [dropdownPosition, setDropdownPosition] = useState({top: 0, left: 0, width: 0});
 
-  // Update dropdown position when opened
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
@@ -44,7 +41,6 @@ export function CustomDropdown({
     }
   }, [isOpen]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -56,11 +52,9 @@ export function CustomDropdown({
         setIsOpen(false);
       }
     }
-
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () =>
-        document.removeEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOpen]);
 
@@ -80,12 +74,22 @@ export function CustomDropdown({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          inline-flex items-center justify-between gap-2 px-2.5 py-1.5 
-          rounded-md border text-sm min-w-[120px] max-w-[200px] ${className}
+          inline-flex items-center justify-between gap-2 px-2.5
+          rounded-sm border text-sm min-w-[120px] w-full ${className}
+          ${label ? 'py-1' : 'py-1.5'}
           ${disabled ? 'opacity-50 cursor-not-allowed border-transparent bg-muted' : 'border-transparent hover:border-border hover:bg-muted text-muted-foreground'}
           ${value ? 'text-foreground' : ''}
         `}>
-        <span className='truncate'>{displayText}</span>
+        <span className='truncate flex flex-col items-start'>
+          {label && (
+            <span className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide leading-none mb-0.5'>
+              {label}
+            </span>
+          )}
+          <span className={value ? 'text-foreground' : 'text-muted-foreground'}>
+            {displayText}
+          </span>
+        </span>
         <ChevronDown
           size={14}
           className={`flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -95,7 +99,7 @@ export function CustomDropdown({
       {isOpen && !disabled && (
         <div
           ref={dropdownRef}
-          className='fixed bg-popover border border-border rounded-md shadow-lg z-[9999] max-h-60 overflow-y-auto'
+          className='fixed bg-popover border border-border rounded-sm shadow-md z-[9999] max-h-60 overflow-y-auto'
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,
@@ -112,7 +116,7 @@ export function CustomDropdown({
                 type='button'
                 onClick={() => handleSelect(option.value)}
                 className={`
-                  w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors
+                  w-full text-left px-3 py-1.5 text-sm !rounded-none hover:bg-muted transition-colors
                   ${value === option.value ? 'bg-muted font-medium' : ''}
                 `}>
                 {option.label}
