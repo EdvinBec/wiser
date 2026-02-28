@@ -70,6 +70,12 @@ builder.Services.AddAuthentication(options =>
     options.ClientSecret = builder.Configuration["Google:ClientSecret"]
         ?? throw new InvalidOperationException("Google:ClientSecret is not configured");
     options.SignInScheme = "Cookies";
+    options.Events.OnRedirectToAuthorizationEndpoint = context =>
+    {
+        var uri = context.RedirectUri.Replace("http://", "https://");
+        context.Response.Redirect(uri);
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -112,6 +118,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();   // runs `dotnet ef database update` equivalent
 }
+
+app.UseDeveloperExceptionPage();
 
 if (app.Environment.IsDevelopment())
 {
