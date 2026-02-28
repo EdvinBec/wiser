@@ -258,7 +258,7 @@ export function Timetable({
               )}
             </div>
           ) : (
-            <div className="w-full mt-2 md:mt-4 overflow-x-auto">
+            <div className="w-full mt-2 md:mt-4">
               <WeekGrid
                 academicYear={selectedAcademicYear}
                 weekNumber={selectedWeek ?? 1}

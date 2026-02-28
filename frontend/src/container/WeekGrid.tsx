@@ -52,7 +52,7 @@ export function WeekGrid({
         </div>
 
         {/* scrollable week view with better mobile support */}
-        <div className='flex-1 overflow-x-auto overflow-y-visible md:overflow-x-hidden [overscroll-behavior-x:contain] [touch-action:pan-x_pan-y_pinch-zoom]'>
+        <div className='flex-1 overflow-x-auto [overflow-y:clip] md:overflow-x-hidden [overscroll-behavior-x:contain] [touch-action:pan-x_pan-y_pinch-zoom]'>
           <div className='min-w-max md:min-w-0'>
             {/* day headers - compact on mobile */}
             <div className='flex text-xs md:text-sm text-muted-foreground select-none'>
