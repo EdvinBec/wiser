@@ -44,7 +44,8 @@ export function AuthProvider({children}: {children: ReactNode}) {
   }, [token]);
 
   const login = () => {
-    window.location.href = 'http://localhost:5013/auth/google';
+    const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013';
+    window.location.href = `${base}/auth/google`;
   };
 
   const logout = () => {

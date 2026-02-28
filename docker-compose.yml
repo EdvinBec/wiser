@@ -7,7 +7,7 @@ services:
     ports:
       - '5173:5173'
     environment:
-      VITE_API_BASE_URL: 'https://urnik.live/api/api/Timetable'
+      VITE_API_BASE_URL: 'https://urnik.live/api'
       __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: 'urnik.live,.urnik.live'
     restart: unless-stopped
     depends_on:

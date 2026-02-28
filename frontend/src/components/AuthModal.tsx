@@ -3,6 +3,7 @@ import {Modal} from '@/components/Modal';
 import {LoginForm} from '@/components/LoginForm';
 import {RegisterForm} from '@/components/RegisterForm';
 import {useI18n} from '@/lib/i18n';
+import {useAuth} from '@/contexts/AuthContext.shared';
 
 interface AuthModalProps {
   open: boolean;
@@ -16,6 +17,7 @@ export function AuthModal({
   defaultMode = 'login',
 }: AuthModalProps) {
   const {t} = useI18n();
+  const {login} = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +44,7 @@ export function AuthModal({
 
         {/* Google */}
         <button
-          onClick={() => { window.location.href = 'http://localhost:5013/auth/google'; }}
+          onClick={login}
           className='w-full flex items-center justify-center gap-3 py-2 px-4 border border-border text-sm font-medium hover:bg-muted transition-colors'>
           <svg className='w-4 h-4 flex-shrink-0' viewBox='0 0 24 24'>
             <path fill='#4285F4' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z' />
