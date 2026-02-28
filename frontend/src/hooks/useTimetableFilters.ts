@@ -91,7 +91,7 @@ export function useTimetableFilters(
   const filteredEvents = useMemo(() => {
     if (!events.length) return events;
     return events.filter((ev) => {
-      if (ev.type === 'Lecture') return true;
+      if (ev.type === 'Lecture' || ev.type === 'Seminar' || ev.type === 'SeminarExercise') return true;
       if (ev.groupName === 'RIT 2') return true;
       const selected = groupFilter[ev.classId];
       if (!selected || selected.length === 0) return true;
