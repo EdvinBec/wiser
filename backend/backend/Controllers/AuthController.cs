@@ -28,8 +28,7 @@ public class AuthController : ControllerBase
     [HttpGet("google")]
     public IActionResult GoogleLogin()
     {
-        var redirectUrl = Url.Action(nameof(GoogleCallback), "Auth");
-        var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+        var properties = new AuthenticationProperties { RedirectUri = "/api/auth/google/callback" };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
 
