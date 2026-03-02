@@ -281,13 +281,21 @@ public class ExcelParserService
                 }
             }
 
-            await database.ExecuteInTransactionAsync(async () =>
+            // Do not replace if we failed to parse anything — keep existing timetable visible
+            if (sessions.Count == 0)
             {
-                await database.DeleteSessionsByCourseAsync(courseId);
-                await database.AddSessions(sessions);
-
-                await database.SaveContext();
-            });
+                await _logger.LogAsync(LogLevel.Warning,
+                    $"Parsed 0 sessions for {e.CourseCode}-{e.Grade}-{e.Project}. Skipping replacement to keep existing data.");
+            }
+            else
+            {
+                await database.ExecuteInTransactionAsync(async () =>
+                {
+                    await database.DeleteSessionsByCourseAsync(courseId);
+                    await database.AddSessions(sessions);
+                    await database.SaveContext();
+                });
+            }
 
             await _logger.LogAsync(
                 LogLevel.Information,

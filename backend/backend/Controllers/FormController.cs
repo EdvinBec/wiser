@@ -24,7 +24,8 @@ public class FormController : ControllerBase
     {
         try
         {
-            var options = await _excelFetcherService.ScrapeFormOptionsAsync();
+            // Return cached options immediately; refresh happens in background if needed
+            var options = await _excelFetcherService.GetFormOptionsCachedAsync();
             return Ok(options);
         }
         catch (Exception ex)

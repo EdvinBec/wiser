@@ -97,7 +97,7 @@ export function useTimetableData({
           e?.name === 'AbortError' || e?.message?.includes('aborted');
         if (!isAbort) {
           setError(e?.message ?? 'Failed to load timetable');
-          setEvents([]);
+          // Preserve previously shown events to keep the table visible
         }
       } finally {
         setLoading(false);

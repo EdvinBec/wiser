@@ -199,7 +199,6 @@ public class DatabaseService
 
         await _logger.LogAsync(LogLevel.Information, $"Deleting {sessions.Count} existing sessions for courseId={courseId}");
         _context.Sessions.RemoveRange(sessions);
-        await _context.SaveChangesAsync();
     }
     
     public async Task ExecuteInTransactionAsync(Func<Task> action)

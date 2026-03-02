@@ -19,6 +19,8 @@ public class ExcelFetcherService : IAsyncLifetime
     private readonly Logger _logger;
     private readonly string _downloadPath;
     private readonly string _screenshotPath;
+    private readonly string _optionsCachePath;
+    private readonly SemaphoreSlim _scrapeSemaphore = new(1, 1);
     
     // Cache scraped form options to avoid re-scraping
     private FormOptionsDto? _cachedFormOptions = null;
@@ -44,6 +46,28 @@ public class ExcelFetcherService : IAsyncLifetime
 
         Directory.CreateDirectory(_downloadPath);
         Directory.CreateDirectory(_screenshotPath);
+
+        _optionsCachePath = Path.Combine(_downloadPath, "form_options_cache.json");
+
+        // Try to load previously persisted form options cache at startup
+        try
+        {
+            if (File.Exists(_optionsCachePath))
+            {
+                var json = File.ReadAllText(_optionsCachePath);
+                var fromDisk = System.Text.Json.JsonSerializer.Deserialize<FormOptionsDto>(json);
+                if (fromDisk != null)
+                {
+                    _cachedFormOptions = fromDisk;
+                    // Mark as expired so background refresh can happen, but usable immediately
+                    _cacheExpiry = DateTime.MinValue;
+                }
+            }
+        }
+        catch
+        {
+            // ignore cache read issues
+        }
     }
 
     public async Task InitializeAsync()
@@ -77,6 +101,17 @@ public class ExcelFetcherService : IAsyncLifetime
             await _logger.LogAsync(LogLevel.Information, "Returning cached form options");
             return _cachedFormOptions;
         }
+
+        // Ensure only one scrape runs at a time
+        await _scrapeSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            // Double-check after acquiring the semaphore
+            if (_cachedFormOptions != null && DateTime.UtcNow < _cacheExpiry)
+            {
+                await _logger.LogAsync(LogLevel.Information, "Returning cached form options (post-lock)");
+                return _cachedFormOptions;
+            }
 
         await InitializeAsync();
 
@@ -270,7 +305,65 @@ public class ExcelFetcherService : IAsyncLifetime
         _cacheExpiry = DateTime.UtcNow.Add(CacheDuration);
         await _logger.LogAsync(LogLevel.Information, $"Cached form options (expires in {CacheDuration.TotalMinutes} minutes)");
 
+        // Persist cache to disk for fast cold-starts
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(formOptions);
+            File.WriteAllText(_optionsCachePath, json);
+        }
+        catch (Exception ex)
+        {
+            await _logger.LogAsync(LogLevel.Warning, $"Failed to persist form options cache: {ex.Message}");
+        }
+
         return formOptions;
+        }
+        finally
+        {
+            if (_scrapeSemaphore.CurrentCount == 0)
+            {
+                _scrapeSemaphore.Release();
+            }
+        }
+    }
+
+    // Return cached options immediately; refresh in background if stale/absent
+    public async Task<FormOptionsDto> GetFormOptionsCachedAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cachedFormOptions != null)
+        {
+            // Kick a background refresh if expired
+            if (DateTime.UtcNow >= _cacheExpiry)
+            {
+                _ = Task.Run(() => ScrapeFormOptionsAsync(cancellationToken));
+            }
+            return _cachedFormOptions;
+        }
+
+        // Try disk cache
+        try
+        {
+            if (File.Exists(_optionsCachePath))
+            {
+                var json = await File.ReadAllTextAsync(_optionsCachePath, cancellationToken);
+                var fromDisk = System.Text.Json.JsonSerializer.Deserialize<FormOptionsDto>(json);
+                if (fromDisk != null)
+                {
+                    _cachedFormOptions = fromDisk;
+                    // Trigger background refresh to update selectors
+                    _ = Task.Run(() => ScrapeFormOptionsAsync(cancellationToken));
+                    return fromDisk;
+                }
+            }
+        }
+        catch
+        {
+            // ignore deserialization errors
+        }
+
+        // No cache at all — scrape in background and return empty result
+        _ = Task.Run(() => ScrapeFormOptionsAsync(cancellationToken));
+        return new FormOptionsDto();
     }
 
     public async Task DownloadsExcel(string courseCode, int grade, string project, string groupName, CancellationToken cancellationToken = default)
