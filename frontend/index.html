@@ -1,19 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/timetable.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="/timetable.png" />
+    <link
+      rel="apple-touch-icon"
+      href="/pwa-192x192.png" />
+    <meta
+      name="apple-mobile-web-app-capable"
+      content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="default" />
+    <meta
+      name="theme-color"
+      content="#1e3a5f" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
-      rel="stylesheet"
-    />
+      rel="stylesheet" />
     <script
       defer
       data-website-id="68dad7e337038cf046bfcdda"
       data-domain="urnik.live"
-      src="https://datafa.st/js/script.js"
-    ></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      src="https://datafa.st/js/script.js"></script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
     <title>Urnik - FERI RIT VS 2</title>
   </head>
   <body>
@@ -21,17 +36,19 @@
       (function () {
         try {
           var saved =
-            localStorage.getItem("themeV2") || localStorage.getItem("themeV1");
+            localStorage.getItem('themeV2') || localStorage.getItem('themeV1');
           var isDark =
-            saved === "dark" ||
+            saved === 'dark' ||
             (!saved &&
               window.matchMedia &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches);
-          if (isDark) document.documentElement.classList.add("dark");
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
     </script>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script
+      type="module"
+      src="/src/main.tsx"></script>
   </body>
 </html>
