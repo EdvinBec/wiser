@@ -5,6 +5,10 @@ the code was prepared; bring this file (it is in the repo) and start at **Part 2
 
 ---
 
+> Need help somewhere without this repository open — a phone, another machine? Paste
+> **`HANDOFF.md`** into the conversation. It is a short primer that carries enough state to ask
+> useful questions without this document.
+
 ## 1. What this is, in one screen
 
 A timetable for UM FERI students. A student picks subjects — from any programme and year — and
