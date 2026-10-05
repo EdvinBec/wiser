@@ -12,6 +12,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Docker CLI writes its config under $HOME. On a machine whose home directory is encrypted and
+# only mounted at interactive login — this one — $HOME is unwritable to a systemd timer, and
+# every docker command fails with "mkdir /home/<user>/.docker: permission denied". Keeping the
+# config beside the checkout removes the dependency on anyone being logged in.
+export DOCKER_CONFIG="${DOCKER_CONFIG:-$PWD/.docker}"
+mkdir -p "$DOCKER_CONFIG"
+
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
 HEALTH_URL="http://127.0.0.1:${FRONTEND_PORT:-8080}/api/wise/published"
 

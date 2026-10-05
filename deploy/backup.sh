@@ -9,6 +9,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Docker CLI writes its config under $HOME. On a machine whose home directory is encrypted and
+# only mounted at interactive login — this one — $HOME is unwritable to a systemd timer, and
+# every docker command fails with "mkdir /home/<user>/.docker: permission denied". Keeping the
+# config beside the checkout removes the dependency on anyone being logged in.
+export DOCKER_CONFIG="${DOCKER_CONFIG:-$PWD/.docker}"
+mkdir -p "$DOCKER_CONFIG"
+
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 DEST="${BACKUP_DIR:-deploy/backups}"
 

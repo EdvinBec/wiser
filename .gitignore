@@ -75,3 +75,6 @@ backend/backend/Logs/
 
 # Database dumps written by deploy/backup.sh
 deploy/backups/
+
+# Docker CLI config, kept out of the encrypted home (see deploy/update.sh)
+.docker/
