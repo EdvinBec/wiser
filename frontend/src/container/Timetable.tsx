@@ -2,7 +2,7 @@ import {useEffect, useState, useMemo} from 'react';
 import {TimetableHeader} from './TimetableHeader.tsx';
 import {TimeAxis} from './TimeAxis.tsx';
 import {WeekGrid} from './WeekGrid';
-import {OnboardingFiltersModal} from './OnboardingFiltersModal';
+import {ScheduleBuilderModal} from './ScheduleBuilderModal';
 import type {TimetableEvent} from '@/types/TimetableEvent.ts';
 import {ScheduleColumn} from './ScheduleColumn.tsx';
 import {TimetableEventBlockDetails} from './TimetableEventBlockDetailModal.tsx';
@@ -11,17 +11,14 @@ import {useLocalStorageState} from '@/hooks/useLocalStorageState';
 import {
   weeksInAcademicYear,
   getAcademicWeekNumber,
+  academicYearForDate,
   isSameDay,
 } from '@/utils/academicCalendar';
 import {useTimetableNavigation} from '@/hooks/useTimetableNavigation';
 import {useAcademicCalendar} from '@/hooks/useAcademicCalendar';
-import {useTimetableData} from '@/hooks/useTimetableData';
-import {useTimetableFilters} from '@/hooks/useTimetableFilters';
-import {useCoursePreferences} from '@/hooks/useCoursePreferences';
-import {toast} from 'sonner';
+import {useWiseSchedule} from '@/hooks/useWiseSchedule';
 import {TimetableControls} from './TimetableControls';
 import {CurrentTimeIndicator} from './CurrentTimeIndicator';
-import {getFilterableClasses} from '@/utils/timetableFilters';
 import PageHeader from '@/components/PageHeader.tsx';
 
 const HOUR_HEIGHT = 64;
@@ -29,15 +26,7 @@ const DAY_START = 7;
 const DAY_END = 21;
 const hours = Array.from({length: DAY_END - DAY_START + 1}, (_, i) => i + DAY_START);
 
-export function Timetable({
-  courseId,
-  headerTitle,
-  onSelectionChange,
-}: {
-  courseId: number | null;
-  headerTitle?: string;
-  onSelectionChange: (grade: string, project: string) => void;
-}) {
+export function Timetable({headerTitle}: {headerTitle?: string}) {
   const {
     selectedView,
     setSelectedView,
@@ -50,17 +39,22 @@ export function Timetable({
   const {selectedAcademicYear, setSelectedAcademicYear, academicYear} =
     useAcademicCalendar({selectedView, selectedDay});
 
-  const {events, loading, error, classes, groups, classGroupMappings, latestCheck} =
-    useTimetableData({selectedView, selectedDay, selectedWeek, academicYear, courseId});
-
+  // The timetable is built from the student's own selections — a subject plus, where the
+  // execution splits, their group. Filtering happens on the server, so what arrives here is
+  // already only their events.
   const {
-    groupFilter,
-    setGroupFilter,
-    filteredEvents,
-    showFilterModal,
-    setShowFilterModal,
-    hasInitialFilters,
-  } = useTimetableFilters(events);
+    selections,
+    addSelection,
+    removeSelection,
+    updatePicks,
+    events: filteredEvents,
+    loading,
+    error,
+    publishedAt,
+    hasSelections,
+  } = useWiseSchedule({selectedView, selectedDay, selectedWeek, academicYear});
+
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   const [isDark, setIsDark] = useLocalStorageState<boolean>('themeV2', false, {
     legacyKeys: ['themeV1'],
@@ -70,15 +64,6 @@ export function Timetable({
   const {t} = useI18n();
 
   const [selectedEvent, setSelectedEvent] = useState<TimetableEvent | null>(null);
-
-  const {
-    selectedGrade,
-    selectedProject,
-    handleGradeChange,
-    handleProjectChange,
-    availableProjects,
-    formOptions,
-  } = useCoursePreferences(onSelectionChange);
 
   // Keep URL in sync so the current view can be shared
   useEffect(() => {
@@ -93,13 +78,20 @@ export function Timetable({
         ),
       );
     } else if (selectedView === 'week' && selectedWeek != null) {
-      params.set('w', String(selectedWeek));
-      params.set('y', String(selectedAcademicYear));
+      // Only pin the week when it is NOT the current one. Writing it unconditionally is how the
+      // app poisoned its own URL: it stamped a stale academic year in, that URL then outranked
+      // every later correction, and the grid stayed on a week with no data. Leaving it out means
+      // a plain link always opens on whatever week the reader is actually in, which is also what
+      // somebody sharing "the timetable" means.
+      const currentWeek = getAcademicWeekNumber(new Date());
+      const currentYear = academicYearForDate(new Date());
+      if (selectedWeek !== currentWeek || selectedAcademicYear !== currentYear) {
+        params.set('w', String(selectedWeek));
+        params.set('y', String(selectedAcademicYear));
+      }
     }
-    if (selectedGrade) params.set('g', selectedGrade);
-    if (selectedProject) params.set('p', selectedProject);
     window.history.replaceState(null, '', '?' + params.toString());
-  }, [selectedView, selectedDay, selectedWeek, selectedAcademicYear, selectedGrade, selectedProject]);
+  }, [selectedView, selectedDay, selectedWeek, selectedAcademicYear]);
 
   // Apply theme to <html> element
   useEffect(() => {
@@ -107,45 +99,31 @@ export function Timetable({
     try { localStorage.setItem('themeV2', isDark ? 'dark' : 'light'); } catch { /* storage unavailable */ }
   }, [isDark]);
 
-  // Persist filter changes
+  // An empty timetable has nothing to show, so open the builder straight away.
   useEffect(() => {
-    try { localStorage.setItem('timetableGroupFilterV2', JSON.stringify(groupFilter)); } catch { /* storage unavailable */ }
-  }, [groupFilter]);
+    if (!hasSelections) setShowFilterModal(true);
+  }, [hasSelections]);
 
-  // Open onboarding modal if no filters are saved
-  useEffect(() => {
-    if (classes.length > 0 && !hasInitialFilters) {
-      setShowFilterModal(true);
-    }
-  }, [classes, hasInitialFilters, setShowFilterModal]);
-
-  // Warn when data is stale (> 30 min since last check)
-  useEffect(() => {
-    const checkStaleData = () => {
-      if (latestCheck != null) {
-        if (latestCheck < Date.now() - 30 * 60 * 1000) {
-          toast.error(
-            t.common.staleDataWarning ||
-              'Data might not be up to date. Last update was more than 30 minutes ago.',
-            {duration: Infinity, id: 'stale-data-warning'},
-          );
-        }
-      }
-    };
-    checkStaleData();
-    const interval = setInterval(checkStaleData, 60 * 1000);
-    return () => clearInterval(interval);
-  }, [latestCheck, t.common.staleDataWarning]);
+  // The old staleness toast is gone on purpose. It measured how long ago OUR scraper last ran,
+  // which needed warning about. What we now show is when the SCHOOL last published, and that
+  // being weeks old is normal — a 30-minute threshold against it would warn permanently.
 
   const handleResetToToday = () => {
     const today = new Date();
     if (selectedView === 'day') {
       setSelectedDay(today);
-    } else {
-      setSelectedWeek(getAcademicWeekNumber(today));
+      return;
     }
+    // Set the YEAR as well as the week. Setting only the week is what sent "today" to week N of
+    // whatever year happened to be selected — the week number is meaningless without the year
+    // it counts from, and the two must always move together.
+    setSelectedAcademicYear(academicYearForDate(today));
+    setSelectedWeek(getAcademicWeekNumber(today));
   };
 
+  // Year and week are set side by side, never one from inside the other's updater. A state
+  // updater may run more than once, and a setSelectedAcademicYear call nested in one moved the
+  // year twice per click — which is how the grid ended up on a week of the wrong year.
   const onPrev = () => {
     if (selectedView === 'day') {
       setSelectedDay((prev) => {
@@ -154,14 +132,17 @@ export function Timetable({
         next.setDate(prev.getDate() - 1);
         return next;
       });
-    } else {
-      setSelectedWeek((prev) => {
-        const current = prev ?? 1;
-        if (current > 1) return current - 1;
-        setSelectedAcademicYear((ay) => ay - 1);
-        return weeksInAcademicYear(selectedAcademicYear - 1);
-      });
+      return;
     }
+
+    const current = selectedWeek ?? 1;
+    if (current > 1) {
+      setSelectedWeek(current - 1);
+      return;
+    }
+    const previousYear = selectedAcademicYear - 1;
+    setSelectedAcademicYear(previousYear);
+    setSelectedWeek(weeksInAcademicYear(previousYear));
   };
 
   const onNext = () => {
@@ -172,21 +153,17 @@ export function Timetable({
         next.setDate(prev.getDate() + 1);
         return next;
       });
-    } else {
-      setSelectedWeek((prev) => {
-        const current = prev ?? 1;
-        const max = weeksInAcademicYear(selectedAcademicYear);
-        if (current < max) return current + 1;
-        setSelectedAcademicYear((ay) => ay + 1);
-        return 1;
-      });
+      return;
     }
-  };
 
-  const filterableClasses = useMemo(
-    () => getFilterableClasses(classes, groups, classGroupMappings),
-    [classes, groups, classGroupMappings],
-  );
+    const current = selectedWeek ?? 1;
+    if (current < weeksInAcademicYear(selectedAcademicYear)) {
+      setSelectedWeek(current + 1);
+      return;
+    }
+    setSelectedAcademicYear(selectedAcademicYear + 1);
+    setSelectedWeek(1);
+  };
 
   const filteredDayEvents = useMemo(
     () =>
@@ -214,23 +191,29 @@ export function Timetable({
       </div>
 
       <TimetableControls
-        formOptions={formOptions}
-        selectedGrade={selectedGrade}
-        selectedProject={selectedProject}
-        availableProjects={availableProjects}
-        handleGradeChange={handleGradeChange}
-        handleProjectChange={handleProjectChange}
         isDark={isDark}
         setIsDark={setIsDark}
         setShowFilterModal={setShowFilterModal}
-        latestCheck={latestCheck}
+        publishedAt={publishedAt}
       />
 
-      {!selectedGrade || !selectedProject ? (
-        <div className="mt-8 flex flex-col items-center gap-2 text-center text-muted-foreground">
-          <p className="text-sm">
-            {!selectedGrade ? t.common.selectYearAndProject : t.common.selectProject}
-          </p>
+      <ScheduleBuilderModal
+        open={showFilterModal}
+        selections={selections}
+        onAdd={addSelection}
+        onRemove={removeSelection}
+        onUpdatePicks={updatePicks}
+        onClose={() => setShowFilterModal(false)}
+      />
+
+      {!hasSelections ? (
+        <div className="mt-8 flex flex-col items-center gap-3 text-center text-muted-foreground">
+          <p className="text-sm">Urnik je še prazen.</p>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+            onClick={() => setShowFilterModal(true)}>
+            Dodaj predmet
+          </button>
         </div>
       ) : (
         <>
@@ -241,6 +224,19 @@ export function Timetable({
           )}
           {error && (
             <div className="mt-4 text-sm text-red-600 break-words">{error}</div>
+          )}
+
+          {/* An empty grid used to say nothing at all, which is indistinguishable from a broken
+              one. Say it is empty, and name the period, so a wrong week is visible as a wrong
+              week instead of as missing data. */}
+          {!loading && !error && filteredEvents.length === 0 && (
+            <div className="mt-4 text-sm text-muted-foreground">
+              {selectedView === 'day'
+                ? 'Ta dan ni ničesar.'
+                : `Ta teden ni ničesar (${selectedAcademicYear}/${String(
+                    (selectedAcademicYear + 1) % 100,
+                  ).padStart(2, '0')}, teden ${selectedWeek ?? '?'}).`}
+            </div>
           )}
 
           {selectedView === 'day' ? (
@@ -275,19 +271,6 @@ export function Timetable({
             open={!!selectedEvent}
             event={selectedEvent ?? undefined}
             onClose={() => setSelectedEvent(null)}
-          />
-
-          <OnboardingFiltersModal
-            open={showFilterModal}
-            classes={filterableClasses}
-            groups={groups}
-            classGroupMappings={classGroupMappings}
-            initial={groupFilter}
-            onClose={() => setShowFilterModal(false)}
-            onSave={(sel) => {
-              setGroupFilter(sel);
-              setShowFilterModal(false);
-            }}
           />
 
           <div className="mt-10 pt-4 border-t text-xs text-muted-foreground text-center">

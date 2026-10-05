@@ -1,182 +1,11 @@
-import type {TimetableEvent} from '@/types/TimetableEvent';
-import type {TimetableEventType} from '@/types/TimetableEventType';
+/**
+ * Client for our own backend: authentication and the per-user timetable selections.
+ *
+ * Timetable data does not come through here — it comes from the Wise catalogue and schedule in
+ * `@/lib/wiseApi`, which the backend proxies.
+ */
 
-const API_BASE = `${
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013'
-}/api/timetable`;
-
-type ApiEvent = {
-  id: number;
-  classId: number;
-  className: string;
-  instructorId: number;
-  instructorName: string;
-  roomId: number;
-  roomName: string;
-  type: TimetableEventType | string;
-  groupId: number;
-  groupName: string;
-  startAt: string; // ISO
-  finishAt: string; // ISO
-};
-
-// Prefer displaying exactly the hour stored in DB for Europe/Ljubljana.
-// Heuristic: if the timestamp has a real non-zero offset (e.g. +02:00), honor it.
-// If it has Z/+00:00 (common mislabeling when DB stores local wall time), ignore
-// the offset and interpret as Europe/Ljubljana wall time.
-function parseLjubljanaLocalISO(raw: string): Date {
-  // If there is a timezone designator and it's a non-zero offset, trust it
-  const tzMatch = raw.match(/(Z|[+-]\d{2}:?\d{2})$/i);
-  if (tzMatch) {
-    const tz = tzMatch[1].toUpperCase();
-    const isZeroOffset =
-      tz === 'Z' ||
-      tz === '+00:00' ||
-      tz === '+0000' ||
-      tz === '-00:00' ||
-      tz === '-0000';
-    if (!isZeroOffset) return new Date(raw);
-  }
-
-  // Extract Y-M-D H:m[:s] ignoring fractional seconds and any (possibly zero) TZ suffix
-  const m = raw.match(
-    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i,
-  );
-  if (!m) return new Date(raw);
-
-  const Y = Number(m[1]);
-  const Mo = Number(m[2]);
-  const D = Number(m[3]);
-  const H = Number(m[4]);
-  const Mi = Number(m[5]);
-  const S = Number(m[6] ?? 0);
-
-  // Start from the same wall time as if it were UTC
-  const utcMs = Date.UTC(Y, Mo - 1, D, H, Mi, S);
-  const probe = new Date(utcMs);
-
-  // Derive GMT offset for Europe/Ljubljana at that moment, e.g. "GMT+2"
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Ljubljana',
-    timeZoneName: 'short',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).formatToParts(probe);
-  const tzName = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
-  const mOff = tzName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
-  let offsetMinutes = 0;
-  if (mOff) {
-    const sign = mOff[1] === '-' ? -1 : 1;
-    const hh = Number(mOff[2] ?? 0);
-    const mm = Number(mOff[3] ?? 0);
-    offsetMinutes = sign * (hh * 60 + mm);
-  }
-
-  // Adjust the UTC timestamp backwards by the Ljubljana offset so that when
-  // formatted in Europe/Ljubljana it shows the original wall time.
-  return new Date(utcMs - offsetMinutes * 60_000);
-}
-
-function mapApiEvent(e: ApiEvent): TimetableEvent {
-  return {
-    id: String(e.id),
-    classId: Number(e.classId),
-    className: e.className,
-    instructorId: Number(e.instructorId),
-    instructorName: e.instructorName,
-    roomId: Number(e.roomId),
-    roomName: e.roomName,
-    type: (e.type as TimetableEventType) ?? 'Lecture',
-    groupId: Number(e.groupId),
-    groupName: e.groupName,
-    startAt: parseLjubljanaLocalISO(e.startAt),
-    finishAt: parseLjubljanaLocalISO(e.finishAt),
-  };
-}
-
-export async function fetchWeekTimetable(
-  academicYear: number,
-  weekNumber: number,
-  courseCode: number,
-  signal?: AbortSignal,
-): Promise<TimetableEvent[]> {
-  const url = `${API_BASE}/${academicYear}/${weekNumber}/${courseCode}`;
-  const res = await fetch(url, {signal});
-  if (!res.ok) throw new Error(`Failed week fetch: ${res.status}`);
-  const data: ApiEvent[] = await res.json();
-  return data.map(mapApiEvent);
-}
-
-export async function fetchDayTimetable(
-  academicYear: number,
-  month: number, // 1-12
-  day: number, // 1-31
-  courseCode: number,
-  signal?: AbortSignal,
-): Promise<TimetableEvent[]> {
-  const url = `${API_BASE}/day/${academicYear}/${month}/${day}/${courseCode}`;
-  const res = await fetch(url, {signal});
-  if (!res.ok) throw new Error(`Failed day fetch: ${res.status}`);
-  const data: ApiEvent[] = await res.json();
-  return data.map(mapApiEvent);
-}
-
-export type ClassInfo = {id: number; name: string};
-export type GroupInfo = {id: number; name: string};
-export type ClassGroupMapping = {
-  classId: number;
-  groupIds: number[];
-};
-
-export async function fetchClasses(
-  courseId: number,
-  signal?: AbortSignal,
-): Promise<ClassInfo[]> {
-  const res = await fetch(`${API_BASE}/classes/${courseId}`, {signal});
-  if (!res.ok) throw new Error(`Failed classes fetch: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchGroups(
-  courseId: number,
-  signal?: AbortSignal,
-): Promise<GroupInfo[]> {
-  const res = await fetch(`${API_BASE}/groups/${courseId}`, {signal});
-  if (!res.ok) throw new Error(`Failed groups fetch: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchClassGroupMappings(
-  courseId: number,
-  signal?: AbortSignal,
-): Promise<ClassGroupMapping[]> {
-  const res = await fetch(`${API_BASE}/class-groups/${courseId}`, {signal});
-  if (!res.ok) throw new Error(`Failed class-groups fetch: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchLatestCheck(
-  courseId: number,
-  signal?: AbortSignal,
-): Promise<number | null> {
-  const res = await fetch(`${API_BASE}/latestCheck/${courseId}`, {signal});
-  if (!res.ok) throw new Error(`Failed latest check fetch: ${res.status}`);
-  const data: Record<string, unknown> = await res.json();
-  // Support both ASP.NET default camelCase and explicit PascalCase keys
-  const raw = data?.latestCheck ?? data?.LatestCheck;
-  if (!raw) return null;
-  const ms = Date.parse(String(raw));
-  return Number.isNaN(ms) ? null : ms;
-}
-
-// ---------------------------------------------------------------------------
-// Generic API client and user/auth functions
-// ---------------------------------------------------------------------------
+import type {WiseSelection} from './wiseApi';
 
 const API_HOST = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013';
 
@@ -185,7 +14,7 @@ async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(
-      (data as Record<string, unknown>).message as string ||
+      ((data as Record<string, unknown>).message as string) ||
         `Request failed: ${res.status}`,
     );
   }
@@ -193,52 +22,15 @@ async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export async function getUserPreferences(
-  token: string,
-): Promise<{preferredGrade?: string; preferredProject?: string}> {
-  return apiClient('/user/preferences', {
-    headers: {Authorization: `Bearer ${token}`},
-  });
+function authHeaders(token: string, json = false): HeadersInit {
+  return json
+    ? {'Content-Type': 'application/json', Authorization: `Bearer ${token}`}
+    : {Authorization: `Bearer ${token}`};
 }
 
-export async function saveUserPreferences(
-  token: string,
-  grade: string,
-  project: string,
-): Promise<void> {
-  return apiClient('/user/preferences', {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({preferredGrade: grade, preferredProject: project}),
-  });
-}
+// ── Authentication ──────────────────────────────────────────────────────────
 
-export async function getUserFilters(
-  token: string,
-): Promise<{groupFilters?: string}> {
-  return apiClient('/user/filters', {
-    headers: {Authorization: `Bearer ${token}`},
-  });
-}
-
-export async function saveUserFilters(
-  token: string,
-  filters: Record<string, number[]>,
-): Promise<void> {
-  return apiClient('/user/filters', {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({groupFilters: JSON.stringify(filters)}),
-  });
-}
-
-export async function loginWithEmail(
+export function loginWithEmail(
   email: string,
   password: string,
 ): Promise<{token: string}> {
@@ -249,7 +41,7 @@ export async function loginWithEmail(
   });
 }
 
-export async function registerWithEmail(
+export function registerWithEmail(
   name: string,
   email: string,
   password: string,
@@ -261,38 +53,29 @@ export async function registerWithEmail(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Legacy/stub functions for backward compatibility with unused components
-// ---------------------------------------------------------------------------
+// ── Timetable selections ────────────────────────────────────────────────────
 
-export type Group = {id: number; name: string};
-export type Course = {id: number; code: string; name: string};
+/**
+ * Persisted shape of a signed-in student's timetable. The version tag matters: the same column
+ * previously held the per-class group filter of the old BV20-only timetable, and a reader that
+ * does not check `v` would hand that back as a list of selections.
+ */
+export type StoredSelections = {v: 2; selections: WiseSelection[]};
 
-export async function fetchGroupsForGrade(
-  courseId: number,
-  _gradeId: number,
-  signal?: AbortSignal,
-): Promise<Group[]> {
-  // This is a stub - the component using this is not currently used
-  return fetchGroups(courseId, signal);
+export function getStoredSelections(
+  token: string,
+): Promise<{groupFilters?: string}> {
+  return apiClient('/user/filters', {headers: authHeaders(token)});
 }
 
-export async function scrapeCourses(): Promise<{
-  newCourses: number;
-  deactivated: number;
-}> {
-  // Stub function - SetupPage is not currently used
-  throw new Error('Not implemented');
-}
-
-export async function scrapeGradesForCourse(
-  _courseId: number,
-): Promise<{newGrades: number}> {
-  // Stub function - SetupPage is not currently used
-  throw new Error('Not implemented');
-}
-
-export async function fetchAvailableCourses(): Promise<Course[]> {
-  // Stub function - SetupPage is not currently used
-  return [];
+export function saveStoredSelections(
+  token: string,
+  selections: WiseSelection[],
+): Promise<void> {
+  const payload: StoredSelections = {v: 2, selections};
+  return apiClient('/user/filters', {
+    method: 'PUT',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({groupFilters: JSON.stringify(payload)}),
+  });
 }
