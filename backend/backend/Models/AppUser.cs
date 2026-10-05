@@ -10,8 +10,12 @@ public class AppUser : IdentityUser
     // User preferences for timetable
     public string? PreferredGrade {get; set;}
     public string? PreferredProject {get; set;}
-    public string? GroupFilters {get; set;} // JSON: {"classId": [groupId1, groupId2]}
+    /// <summary>
+    /// The student's timetable, as JSON: {"v":2,"selections":[{subjectId, name, code, picks}]}.
+    /// The column keeps its old name because it previously held the per-class group filter of
+    /// the BV20-only timetable; the version tag is what tells the two apart.
+    /// </summary>
+    public string? GroupFilters {get; set;}
     
-    public List<UserSavedGroup> SavedGroups {get; set;} = new();
     public List<UserEvent> Events {get; set;} = new();
 }

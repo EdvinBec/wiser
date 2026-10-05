@@ -29,8 +29,6 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetMe()
     {
         var user = await _db.Users
-            .Include(u => u.SavedGroups)
-                .ThenInclude(sg => sg.Group)
             .FirstOrDefaultAsync(u => u.Id == CurrentUserId);
 
         if (user == null) return NotFound();
@@ -41,49 +39,9 @@ public class UserController : ControllerBase
             user.Email,
             user.DisplayName,
             user.AvatarUrl,
-            SavedGroups = user.SavedGroups.Select(sg => new
-            {
-                sg.Id,
-                sg.GroupId,
-                sg.Group.Name
-            })
         });
     }
 
-    // POST /user/groups
-    [HttpPost("groups")]
-    public async Task<IActionResult> SaveGroup([FromBody] SaveGroupRequest req)
-    {
-        var already = await _db.UserSavedGroups
-            .AnyAsync(sg => sg.UserId == CurrentUserId && sg.GroupId == req.GroupId);
-
-        if (already) return Conflict("Group already saved");
-
-        var groupExists = await _db.Groups.AnyAsync(g => g.Id == req.GroupId);
-        if (!groupExists) return NotFound("Group not found");
-
-        _db.UserSavedGroups.Add(new UserSavedGroup
-        {
-            UserId = CurrentUserId,
-            GroupId = req.GroupId
-        });
-        await _db.SaveChangesAsync();
-        return Ok();
-    }
-
-    // DELETE /user/groups/{groupId}
-    [HttpDelete("groups/{groupId}")]
-    public async Task<IActionResult> RemoveGroup(int groupId)
-    {
-        var saved = await _db.UserSavedGroups
-            .FirstOrDefaultAsync(sg => sg.UserId == CurrentUserId && sg.GroupId == groupId);
-
-        if (saved == null) return NotFound();
-
-        _db.UserSavedGroups.Remove(saved);
-        await _db.SaveChangesAsync();
-        return NoContent();
-    }
 
     // GET /user/events
     [HttpGet("events")]
@@ -210,7 +168,6 @@ public class UserController : ControllerBase
     }
 }
 
-public record SaveGroupRequest(int GroupId);
 public record CreateEventRequest(string Title, string? Description, DateTimeOffset StartAt, DateTimeOffset FinishAt, string? Color);
 public record UpdatePreferencesRequest(string? PreferredGrade, string? PreferredProject);
 public record UpdateFiltersRequest(string? GroupFilters);
