@@ -56,12 +56,23 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
     };
 })
-.AddGoogle(options =>
+;
+
+// Google sign-in is OPTIONAL. Without credentials the application still starts and serves
+// everyone who signs in with an email and password; only the Google button stops working.
+// Refusing to boot over a missing optional integration turns a cosmetic gap into an outage,
+// and this one has to be reconfigured every time the domain changes.
+var googleClientId = builder.Configuration["Google:ClientId"];
+var googleClientSecret = builder.Configuration["Google:ClientSecret"];
+var googleConfigured = !string.IsNullOrWhiteSpace(googleClientId)
+                       && !string.IsNullOrWhiteSpace(googleClientSecret);
+
+if (googleConfigured)
 {
-    options.ClientId = builder.Configuration["Google:ClientId"]
-        ?? throw new InvalidOperationException("Google:ClientId is not configured");
-    options.ClientSecret = builder.Configuration["Google:ClientSecret"]
-        ?? throw new InvalidOperationException("Google:ClientSecret is not configured");
+    builder.Services.AddAuthentication().AddGoogle(options =>
+{
+    options.ClientId = googleClientId!;
+    options.ClientSecret = googleClientSecret!;
     options.SignInScheme = "Cookies";
     // Behind a terminating tunnel the app sees plain http, so the redirect_uri handed to
     // Google would come back as http:// and be rejected. Skipped in development, where the
@@ -75,6 +86,7 @@ builder.Services.AddAuthentication(options =>
         return Task.CompletedTask;
     };
 });
+}
 
 builder.Services.AddAuthorization();
 

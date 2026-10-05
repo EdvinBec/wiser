@@ -16,18 +16,35 @@ public class AuthController : ControllerBase
     private readonly UserManager<AppUser> _userManager;
     private readonly TokenService _tokenService;
     private readonly IConfiguration _config;
+    private readonly IAuthenticationSchemeProvider _schemes;
 
-    public AuthController(UserManager<AppUser> userManager, TokenService tokenService, IConfiguration config)
+    public AuthController(
+        UserManager<AppUser> userManager,
+        TokenService tokenService,
+        IConfiguration config,
+        IAuthenticationSchemeProvider schemes)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _config = config;
+        _schemes = schemes;
     }
+
+    /// <summary>
+    /// Google sign-in is optional, so the scheme may not be registered at all. Challenging a
+    /// scheme that does not exist throws, which would surface as a 500 with a stack trace
+    /// rather than an answer anyone can act on.
+    /// </summary>
+    private async Task<bool> GoogleAvailableAsync() =>
+        await _schemes.GetSchemeAsync(GoogleDefaults.AuthenticationScheme) != null;
 
     // Step 1: redirect browser to Google login
     [HttpGet("google")]
-    public IActionResult GoogleLogin()
+    public async Task<IActionResult> GoogleLogin()
     {
+        if (!await GoogleAvailableAsync())
+            return StatusCode(503, new {message = "Google sign-in is not configured on this server."});
+
         // Must match this controller's own route. The "/api" prefix it used to carry only
         // worked behind a proxy that stripped it before forwarding; paths now reach the
         // backend unchanged.
@@ -39,6 +56,9 @@ public class AuthController : ControllerBase
     [HttpGet("google/callback")]
     public async Task<IActionResult> GoogleCallback()
     {
+        if (!await GoogleAvailableAsync())
+            return StatusCode(503, new {message = "Google sign-in is not configured on this server."});
+
         var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
         if (!result.Succeeded)
             return BadRequest("Google authentication failed");
