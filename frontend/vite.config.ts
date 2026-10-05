@@ -24,9 +24,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Urnik - FERI Timetable',
-        short_name: 'Urnik',
-        description: 'Timetable viewer for FERI students',
+        name: 'UrnikWiser — urnik za UM FERI',
+        short_name: 'UrnikWiser',
+        description: 'Urnik za študente UM FERI — izberi predmete in svoje skupine.',
         theme_color: '#1e3a5f',
         background_color: '#fcfcfc',
         display: 'standalone',

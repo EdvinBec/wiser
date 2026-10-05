@@ -273,24 +273,40 @@ export function Timetable({headerTitle}: {headerTitle?: string}) {
             onClose={() => setSelectedEvent(null)}
           />
 
-          <div className="mt-10 pt-4 border-t text-xs text-muted-foreground text-center">
-            {t.common.disclaimerPrefix}{' '}
-            <a
-              href="https://www.wise-tt.com/wtt_um_feri/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline decoration-transparent hover:decoration-inherit">
-              WISE
-            </a>{' '}
-            <span>{t.common.timetable} </span>
-            <a
-              href="https://github.com/EdvinBec/wiser"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline decoration-transparent hover:decoration-inherit p-0 block mt-1">
-              💻 EdvinBec
-            </a>
-          </div>
+          <footer className="mt-10 border-t pt-5 text-center text-xs text-muted-foreground">
+            <p className="mx-auto max-w-prose leading-relaxed">
+              {t.common.disclaimerPrefix}{' '}
+              <a
+                href="https://www.wise-tt.com/wtt_um_feri/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-transparent hover:decoration-inherit">
+                WISE
+              </a>{' '}
+              {t.common.timetable}
+            </p>
+            <p className="mx-auto mt-1.5 max-w-prose leading-relaxed opacity-80">
+              {t.common.disclaimerSuffix}
+            </p>
+            <p className="mt-3">
+              {t.common.builtBy}{' '}
+              <a
+                href="https://github.com/MuhamedKha"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-transparent hover:decoration-inherit">
+                MuhamedKha
+              </a>
+              {' & '}
+              <a
+                href="https://github.com/EdvinBec"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-transparent hover:decoration-inherit">
+                EdvinBec
+              </a>
+            </p>
+          </footer>
         </>
       )}
     </div>

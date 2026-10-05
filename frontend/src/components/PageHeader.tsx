@@ -4,9 +4,9 @@ const PageHeader = ({ headerTitle }: { headerTitle?: string }) => {
   return (
     <div className="flex items-center justify-between gap-2 flex-wrap">
       <div className="flex items-end gap-2">
-        <a href="/" className="block" aria-label="wiseR home">
+        <a href="/" className="block" aria-label="UrnikWiser">
           <span className="text-xl font-semibold tracking-tight">
-            urnik.live
+            UrnikWiser
           </span>
         </a>
         <span className="text-xs text-muted-foreground text-wrap break-words mb-1">

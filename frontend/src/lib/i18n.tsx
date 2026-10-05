@@ -30,6 +30,8 @@ type Dict = {
     switchToDark: string;
     disclaimerPrefix: string;
     timetable: string;
+    disclaimerSuffix: string;
+    builtBy: string;
     latestCheckLabel: string;
     staleDataWarning: string;
     selectYearAndProject: string;
@@ -97,8 +99,11 @@ const dicts: Record<Locale, Dict> = {
       themeDark: "Dark",
       switchToLight: "Switch to light mode",
       switchToDark: "Switch to dark mode",
-      disclaimerPrefix: "This app uses data from the",
-      timetable: " timetable and is not affiliated with Wise Technologies.",
+      disclaimerPrefix: "Timetable data comes from the",
+      timetable: "timetable of UM FERI.",
+      disclaimerSuffix:
+        "An independent student project, not affiliated with Wise Technologies or the faculty. Always check the official timetable before you rely on it.",
+      builtBy: "Built by",
       latestCheckLabel: "Latest check",
       staleDataWarning: "Data might not be up to date. Last update was more than 30 minutes ago.",
       selectYearAndProject: "Select a year and project to view the timetable.",
@@ -175,8 +180,11 @@ const dicts: Record<Locale, Dict> = {
       themeDark: "Temna",
       switchToLight: "Preklopi na svetlo temo",
       switchToDark: "Preklopi na temno temo",
-      disclaimerPrefix: "Aplikacija uporablja podatke iz",
-      timetable: "urnika in ni povezana s podjetjem Wise Technologies.",
+      disclaimerPrefix: "Podatki prihajajo iz",
+      timetable: "urnika UM FERI.",
+      disclaimerSuffix:
+        "Neodvisen študentski projekt, ki ni povezan s podjetjem Wise Technologies ali s fakulteto. Pred zanašanjem vedno preveri uradni urnik.",
+      builtBy: "Ustvarila",
       latestCheckLabel: "Zadnji zajem",
       staleDataWarning: "Podatki morda niso najnovejši. Zadnja posodobitev je bila pred več kot 30 minutami.",
       selectYearAndProject: "Izberi letnik in smer za prikaz urnika.",
