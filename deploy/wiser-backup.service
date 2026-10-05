@@ -6,6 +6,8 @@ After=docker.service wiser.service
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/wiser
+# Filled in by deploy/install-units.sh. Left as-is these are wrong on most
+# machines: "wiser" is rarely a real account.
 User=wiser
 Group=docker
 ExecStart=/opt/wiser/deploy/backup.sh

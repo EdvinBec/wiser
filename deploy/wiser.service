@@ -17,6 +17,8 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/wiser
+# Filled in by deploy/install-units.sh. Left as-is these are wrong on most
+# machines: "wiser" is rarely a real account.
 User=wiser
 Group=docker
 
