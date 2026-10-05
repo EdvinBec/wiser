@@ -12,6 +12,16 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // The service worker answers navigations from the cached index.html, which is right for
+        // client-side routes and wrong for everything the server owns. Without this list a click
+        // on "sign in with Google" never leaves the browser: the worker serves the app shell for
+        // /auth/google, React Router has no such route, and the page renders blank.
+        navigateFallbackDenylist: [
+          /^\/api\//,
+          /^\/auth\//,
+          /^\/user\//,
+          /^\/signin-google/,
+        ],
       },
       manifest: {
         name: 'Urnik - FERI Timetable',
