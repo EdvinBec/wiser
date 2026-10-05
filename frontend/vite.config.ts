@@ -48,6 +48,11 @@ export default defineConfig({
   },
   server: {
     host: true,
-    allowedHosts: ['urnik.live', '.urnik.live'],
+    // Dev server only — the production image serves static files through nginx and never runs
+    // this. Hosts come from the environment so no domain is pinned in the repository.
+    allowedHosts: (process.env.VITE_DEV_ALLOWED_HOSTS ?? '')
+      .split(',')
+      .map((h) => h.trim())
+      .filter(Boolean),
   },
 });

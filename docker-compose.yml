@@ -1,12 +1,15 @@
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Build-time, not runtime: Vite bakes this into the bundle. Empty is the production
+        # value and means same-origin — nginx in this image proxies /api, /auth and /user to
+        # the backend, so the browser never makes a cross-origin request.
+        VITE_API_BASE_URL: '${VITE_API_BASE_URL-}'
     container_name: frontend
     ports:
-      - '5173:5173'
-    environment:
-      VITE_API_BASE_URL: 'https://urnik.live/api'
-      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: 'urnik.live,.urnik.live'
+      - '${FRONTEND_PORT:-8080}:80'
     restart: unless-stopped
     depends_on:
       backend:
@@ -16,7 +19,9 @@ services:
     build: ./backend
     container_name: backend
     ports:
-      - '5013:5013'
+      # Bound to loopback: the frontend container reaches the backend over the compose network,
+      # and the tunnel runs on this host. Nothing on the LAN needs to reach it directly.
+      - '127.0.0.1:${BACKEND_PORT:-5013}:5013'
     environment:
       # Same POSTGRES_* values the database container is created with, so the two can never
       # disagree. Only the host differs: inside the compose network the database answers as
@@ -52,13 +57,14 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      # Published on POSTGRES_PORT (default 5433), NOT 5432. A locally installed PostgreSQL
-      # service already owns 5432 on the dev machine, and when it does this container cannot
-      # bind — while anything pointing at localhost:5432 silently reaches the wrong server with
-      # the wrong credentials. Free 5432 and set POSTGRES_PORT=5432 if you prefer the default.
-      # Only the host sees this port; the backend container reaches the database at
-      # database:5432 on the compose network either way.
-      - '${POSTGRES_PORT:-5433}:5432'
+      # Bound to loopback, and only so a developer can reach the database with psql. The backend
+      # always reaches it as database:5432 on the compose network, so on a server this line can
+      # be deleted outright.
+      #
+      # 5433 rather than 5432 because a locally installed PostgreSQL service commonly owns 5432;
+      # when it does, this container cannot bind and anything pointing at localhost:5432 quietly
+      # reaches that other server instead.
+      - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -77,10 +83,12 @@ services:
     profiles: ['tools']
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
+      PGADMIN_DEFAULT_EMAIL: '${PGADMIN_EMAIL:-admin@example.com}'
+      # No default on purpose. pgadmin refuses to start without a password, which is the right
+      # outcome: the previous value was literally "root" on a published port.
+      PGADMIN_DEFAULT_PASSWORD: '${PGADMIN_PASSWORD:-}'
     ports:
-      - '5050:80'
+      - '127.0.0.1:5050:80'
     depends_on:
       database:
         condition: service_healthy

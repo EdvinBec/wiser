@@ -104,16 +104,27 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// CORS. In development any origin is allowed, because the frontend moves between localhost
+// ports. In production only the site itself may call the API: Frontend__Url is already the
+// canonical public origin, so there is no second place to keep it in step.
+const string corsPolicy = "AppCors";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("DevCors", policy =>
+    options.AddPolicy(corsPolicy, policy =>
     {
-        policy
-            .AllowAnyOrigin() // your FE dev origin
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-        // If you send cookies/Authorization header:
-        // .AllowCredentials();
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            return;
+        }
+
+        var origin = builder.Configuration["Frontend:Url"]
+            ?? throw new InvalidOperationException(
+                "Frontend:Url must be set outside development; it is the only origin allowed to call this API.");
+
+        policy.WithOrigins(origin.TrimEnd('/'))
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
@@ -125,10 +136,11 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();   // runs `dotnet ef database update` equivalent
 }
 
-app.UseDeveloperExceptionPage();
-
+// Stack traces and the Swagger explorer are development-only. Left on in production they hand
+// an anonymous visitor the exception detail and the full API surface.
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
@@ -145,7 +157,7 @@ forwardedOptions.KnownNetworks.Clear();
 forwardedOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedOptions);
 
-app.UseCors("DevCors");
+app.UseCors(corsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();

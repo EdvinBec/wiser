@@ -26,6 +26,6 @@ ENV ASPNETCORE_HTTP_PORTS=5013
 WORKDIR /app
 EXPOSE 5013
 
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "backend.dll"]
