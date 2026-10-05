@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using System.Text.Json.Serialization;
 using backend.Infrastructure.Database;
@@ -11,8 +12,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using DotNetEnv;
 
-// Load .env file if it exists
-Env.Load();
+// The .env lives at the repository root, next to docker-compose.yml, so that `docker compose up`
+// and a local `dotnet run` read the SAME credentials. Env.Load() only looks in the working
+// directory, which for `dotnet run` is backend/backend — so walk up until the file turns up.
+LoadDotEnvFromAncestors();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,17 +24,7 @@ builder.Services.AddOpenApi();
 
 // EF Core
 builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    // First try environment variable
-    var envConn = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
-
-    // Fallback to appsettings.json if no env var
-    var connStr = string.IsNullOrEmpty(envConn)
-        ? builder.Configuration.GetConnectionString("DefaultConnection")
-        : envConn;
-
-    options.UseNpgsql(connStr);
-});
+    options.UseNpgsql(ResolveConnectionString(builder.Configuration)));
 
 // Identity
 builder.Services.AddIdentityCore<AppUser>(options =>
@@ -80,13 +73,26 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// App services (check that singletons don't depend on scoped DbContext)
+// App services
 builder.Services.AddSingleton(new Logger("wiser.log"));
-builder.Services.AddSingleton<ExcelFetcherService>();
-builder.Services.AddSingleton<ExcelParserService>();
-builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddScoped<TokenService>();
-builder.Services.AddHostedService<ExcelFetcherWorker>();
+
+// Wise Timetable published web layer. The frontend cannot call it directly (no CORS on /web/),
+// so WiseClient proxies and caches it. gzip is not optional here: the picker pages are ~293 kB
+// raw and ~21 kB compressed.
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<backend.Services.Wise.WiseClient>(client =>
+    {
+        client.BaseAddress = new Uri("https://wise-tt.com");
+        client.Timeout = TimeSpan.FromSeconds(45);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            Environment.GetEnvironmentVariable("WISE_USER_AGENT") ?? "wiser/1.0 (+https://github.com/wiser)");
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("sl");
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
+    });
 
 // Controllers + JSON enum as string
 builder.Services.AddControllers()
@@ -147,3 +153,64 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+/// <summary>
+/// Finds the repository-root .env and loads it. Walking up matters because the file sits beside
+/// docker-compose.yml while `dotnet run` starts in backend/backend, and both runtimes must end up
+/// with the same database credentials rather than two copies that drift apart.
+/// </summary>
+static void LoadDotEnvFromAncestors()
+{
+    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+
+    while (dir != null)
+    {
+        var candidate = Path.Combine(dir.FullName, ".env");
+        if (File.Exists(candidate))
+        {
+            Env.Load(candidate);
+            return;
+        }
+        dir = dir.Parent;
+    }
+    // No .env is normal in a container, where the orchestrator injects the variables directly.
+}
+
+/// <summary>
+/// Builds the Npgsql connection string, in the order a deployment actually overrides things:
+///
+///   1. DB_CONNECTION_STRING  — what docker-compose injects, a complete string.
+///   2. POSTGRES_* from .env  — the same variables the database container is created with, so
+///                              local development cannot drift from what the container expects.
+///   3. ConnectionStrings:DefaultConnection — appsettings, for a host that configures it there.
+///
+/// Note the host/port split: inside compose the backend reaches the database at "database:5432"
+/// on the private network, while a local `dotnet run` reaches the PUBLISHED port on 127.0.0.1.
+/// POSTGRES_HOST and POSTGRES_PORT carry that difference, and nothing else has to change.
+/// </summary>
+static string ResolveConnectionString(IConfiguration configuration)
+{
+    var full = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+    if (!string.IsNullOrWhiteSpace(full)) return full;
+
+    var user = Environment.GetEnvironmentVariable("POSTGRES_USER");
+    var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+    var database = Environment.GetEnvironmentVariable("POSTGRES_DB");
+
+    if (!string.IsNullOrWhiteSpace(user) &&
+        !string.IsNullOrWhiteSpace(password) &&
+        !string.IsNullOrWhiteSpace(database))
+    {
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "127.0.0.1";
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+        return $"Host={host};Port={port};Database={database};Username={user};Password={password};";
+    }
+
+    var fromSettings = configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(fromSettings)) return fromSettings;
+
+    throw new InvalidOperationException(
+        "No database configuration found. Copy .env.example to .env at the repository root and " +
+        "fill in POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB, or set DB_CONNECTION_STRING.");
+}
