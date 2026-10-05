@@ -176,7 +176,48 @@ sudo systemctl enable --now wiser
 systemctl status wiser
 ```
 
-Test it properly — `sudo reboot`, then check the site comes back on its own.
+> **This laptop has full disk encryption, and that changes what "starts at boot" means.**
+>
+> The LUKS passphrase is asked for in the initramfs, before the OS exists. Until it is typed
+> there is no network, no SSH and no Docker, so none of the units below help. The Mint login
+> password is a different matter and does not block anything: systemd system services start
+> with nobody logged in.
+>
+> What makes this liveable is the battery — it acts as a UPS, so a power cut does not reboot
+> the machine and unplanned restarts are rare. Deliberate reboots still need someone at the
+> keyboard, unless §4.5 is set up.
+
+Test it properly — `sudo reboot`, then check the site comes back on its own. Expect to type the
+disk passphrase first.
+
+### 4.5 Unlocking the disk remotely
+
+Optional, and worth it if you do not want to walk to the laptop after every reboot.
+`dropbear-initramfs` puts a small SSH server in the initramfs so the passphrase can be typed
+over the network:
+
+```bash
+sudo apt install -y dropbear-initramfs
+# authorized_keys for the BOOT ssh server, separate from the one on the running system
+sudo cp ~/.ssh/authorized_keys /etc/dropbear/initramfs/authorized_keys
+sudo nano /etc/dropbear/initramfs/dropbear.conf     # DROPBEAR_OPTIONS="-p 2222 -s -j -k"
+sudo update-initramfs -u
+```
+
+Then on reboot: `ssh -p 2222 root@laptop` and `cryptroot-unlock`.
+
+Two things to know before relying on it. The initramfs has its own host key, so the first
+connection warns about a changed key — that is expected, not an attack. And it needs networking
+in the initramfs, which means DHCP has to work there; test the whole thing with someone near
+the laptop before you need it in anger.
+
+Also stop the system rebooting itself in the night, which would otherwise leave the site at a
+passphrase prompt until morning:
+
+```bash
+sudo sed -i 's|^//\s*Unattended-Upgrade::Automatic-Reboot .*|Unattended-Upgrade::Automatic-Reboot "false";|'   /etc/apt/apt.conf.d/50unattended-upgrades
+grep -n 'Automatic-Reboot' /etc/apt/apt.conf.d/50unattended-upgrades
+```
 
 ---
 
@@ -296,6 +337,8 @@ docker compose --profile tools up -d pgadmin        # needs PGADMIN_PASSWORD in 
 **Not done, needs the laptop:**
 
 - Everything in §3 to §8 — nothing in this list has run on real hardware yet
+- Remote disk unlock (§4.5). Until it exists, every reboot needs someone at the keyboard to
+  type the LUKS passphrase; the battery is what keeps that rare.
 - Google OAuth against the real domain. The redirect path and the `/api` prefix in the callback
   were both wrong for this routing and were fixed here, but the fix has never completed a real
   round trip with Google. Expect this to be the fiddliest part.
