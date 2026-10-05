@@ -28,7 +28,10 @@ public class AuthController : ControllerBase
     [HttpGet("google")]
     public IActionResult GoogleLogin()
     {
-        var properties = new AuthenticationProperties { RedirectUri = "/api/auth/google/callback" };
+        // Must match this controller's own route. The "/api" prefix it used to carry only
+        // worked behind a proxy that stripped it before forwarding; paths now reach the
+        // backend unchanged.
+        var properties = new AuthenticationProperties { RedirectUri = "/auth/google/callback" };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
 
@@ -69,7 +72,9 @@ public class AuthController : ControllerBase
 
         // Redirect to frontend with the token in the URL
         var frontendUrl = _config["Frontend:Url"] ?? "http://localhost:5173";
-        return Redirect($"{frontendUrl}/auth/callback?token={token}");
+        // A PAGE route, so it must not sit under /auth — that prefix is proxied to this API,
+        // and the browser would get a 404 from the backend instead of the app.
+        return Redirect($"{frontendUrl}/login/callback?token={token}");
     }
 
     // Register with email/password

@@ -63,9 +63,14 @@ builder.Services.AddAuthentication(options =>
     options.ClientSecret = builder.Configuration["Google:ClientSecret"]
         ?? throw new InvalidOperationException("Google:ClientSecret is not configured");
     options.SignInScheme = "Cookies";
+    // Behind a terminating tunnel the app sees plain http, so the redirect_uri handed to
+    // Google would come back as http:// and be rejected. Skipped in development, where the
+    // address really is http://localhost and rewriting it breaks sign-in locally.
     options.Events.OnRedirectToAuthorizationEndpoint = context =>
     {
-        var uri = context.RedirectUri.Replace("http://", "https://");
+        var uri = builder.Environment.IsDevelopment()
+            ? context.RedirectUri
+            : context.RedirectUri.Replace("http://", "https://");
         context.Response.Redirect(uri);
         return Task.CompletedTask;
     };

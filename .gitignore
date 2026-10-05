@@ -66,3 +66,11 @@ nunit-*.xml
 # Runtime data written by the backend (logs).
 backend/backend/Data/
 backend/backend/Logs/
+
+# Editor and OS cruft
+.DS_Store
+.idea/
+*.DotSettings.user
+
+# Database dumps written by deploy/backup.sh
+deploy/backups/

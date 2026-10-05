@@ -1,0 +1,35 @@
+# Production overrides. Always used together with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# The deploy scripts and the systemd unit already pass both, so in practice you only type this
+# by hand when debugging.
+
+services:
+  frontend:
+    # Published on loopback only. The tunnel runs on this host and is the single way in, so
+    # nothing on the home LAN can reach the site directly.
+    ports: !override
+      - '127.0.0.1:${FRONTEND_PORT:-8080}:80'
+    restart: always
+    logging: &logging
+      driver: json-file
+      options:
+        # Without a cap, container logs grow until the laptop's disk is full.
+        max-size: '10m'
+        max-file: '5'
+
+  backend:
+    environment:
+      # Explicit rather than relying on the default. This is what turns off the developer
+      # exception page and narrows CORS to Frontend__Url.
+      ASPNETCORE_ENVIRONMENT: Production
+    restart: always
+    logging: *logging
+
+  database:
+    # No published port at all. The backend reaches it as database:5432 on the compose network,
+    # and on a server nothing else should be able to.
+    ports: !reset []
+    restart: always
+    logging: *logging

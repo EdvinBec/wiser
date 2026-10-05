@@ -1,0 +1,10 @@
+# Backup runs BEFORE the update, so if an update goes wrong the newest dump predates it.
+[Unit]
+Description=wiser: nightly database backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

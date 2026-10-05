@@ -1,0 +1,30 @@
+# Starts the whole stack at boot and keeps it up.
+#
+# Install:
+#   sudo cp deploy/wiser.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now wiser
+#
+# Change WorkingDirectory and User below if the checkout is not /opt/wiser.
+
+[Unit]
+Description=wiser timetable stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/wiser
+User=wiser
+Group=docker
+
+# Compose already restarts individual containers; this unit exists so the stack comes back
+# after a reboot and so `systemctl status wiser` is a meaningful question to ask.
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.prod.yml stop
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

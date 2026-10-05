@@ -17,7 +17,7 @@ createRoot(document.getElementById('root')!).render(
             element={<App />}
           />
           <Route
-            path='/auth/callback'
+            path='/login/callback'
             element={<AuthCallback />}
           />
         </Routes>

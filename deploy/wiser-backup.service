@@ -1,0 +1,12 @@
+[Unit]
+Description=wiser: database backup
+Requires=docker.service
+After=docker.service wiser.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/wiser
+User=wiser
+Group=docker
+ExecStart=/opt/wiser/deploy/backup.sh
+TimeoutStartSec=1800

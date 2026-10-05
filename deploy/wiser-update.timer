@@ -1,0 +1,24 @@
+# When updates are allowed to happen.
+#
+# 04:30 is deliberate: the swap costs a few seconds of downtime, and nobody is checking a
+# timetable then. Change OnCalendar to move the window; `systemd-analyze calendar "04:30"` will
+# tell you when it next fires.
+#
+# Install:
+#   sudo cp deploy/wiser-update.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now wiser-update.timer
+#   systemctl list-timers wiser-*
+
+[Unit]
+Description=wiser: nightly update
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+# If the laptop was asleep or off at 04:30, run once it is back rather than skipping the day.
+Persistent=true
+# Spread the start a little so it never collides with the backup to the second.
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
