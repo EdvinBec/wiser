@@ -10,42 +10,22 @@ COPY ["backend/*.csproj", "Backend/"]
 WORKDIR /src/Backend
 RUN dotnet restore
 
-# build
+# build + publish
 COPY ["backend/", "Backend/"]
-WORKDIR /src/Backend
-RUN dotnet build "backend.csproj" -c Release -o /app/build
-
-# =========================
-# Publish (+ install Playwright browsers into a fixed path)
-# =========================
-FROM build AS publish
 WORKDIR /src/Backend
 RUN dotnet publish "backend.csproj" -c Release -o /app/publish
 
-# Install Playwright CLI and download Chromium into /ms-playwright (not user cache)
-RUN dotnet tool install --global Microsoft.Playwright.CLI
-ENV PATH="$PATH:/root/.dotnet/tools"
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN playwright install chromium
-
 # =========================
-# Final runtime (ASP.NET + runtime deps + bundled browsers)
+# Runtime
 # =========================
+# No browser and no Chromium system libraries: timetables used to be scraped with Playwright and
+# are now read over plain HTTP from the published Wise web layer. That removed a browser download
+# from the build and roughly eighteen apt packages from this image.
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 ENV ASPNETCORE_HTTP_PORTS=5013
 WORKDIR /app
 EXPOSE 5013
 
-# OS libraries Chromium/Playwright require on Debian 12 (bookworm)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
-    libgtk-3-0 libpangocairo-1.0-0 libxcomposite1 libxdamage1 libxfixes3 \
-    libxrandr2 libgbm1 libasound2 libatspi2.0-0 libcups2 fonts-liberation \
-    && rm -rf /var/lib/apt/lists/*
-
-# App + preinstalled browsers
 COPY --from=publish /app/publish .
-COPY --from=publish /ms-playwright /ms-playwright
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 ENTRYPOINT ["dotnet", "backend.dll"]

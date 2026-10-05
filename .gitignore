@@ -22,8 +22,16 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+
+# Secrets. .env.example is the only one that may be committed — it holds placeholders.
 .env
+.env.*
+!.env.example
 appsettings.Development.json
+appsettings.*.Local.json
+appsettings.Local.json
+*.pfx
+*.key
 
 # .NET Core
 project.lock.json
@@ -55,7 +63,6 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-# Excel files and screenshots
-backend/backend/Data/ExcelFiles/*.xls
-backend/backend/Data/ExcelFiles/screenshots/*.png
-ExcelDownloadPath/
+# Runtime data written by the backend (logs).
+backend/backend/Data/
+backend/backend/Logs/
