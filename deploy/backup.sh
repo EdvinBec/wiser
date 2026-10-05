@@ -15,10 +15,26 @@ DEST="${BACKUP_DIR:-deploy/backups}"
 mkdir -p "$DEST"
 
 # Credentials come from .env, the same file the database container was created with.
-set -a
-# shellcheck disable=SC1091
-[[ -f .env ]] && source .env
-set +a
+#
+# Read line by line rather than `source`: .env is a key=value file, not a shell script, and
+# values are not required to be shell-safe. WISE_USER_AGENT alone contains parentheses, which
+# a sourcing script fails on with a syntax error that points at the wrong thing entirely.
+read_env() {
+  [[ -f .env ]] || return 0
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+    [[ "$line" == *=* ]] || continue
+    local key="${line%%=*}"
+    local value="${line#*=}"
+    key="${key//[[:space:]]/}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    printf -v "$key" '%s' "$value"
+    export "${key?}"
+  done < .env
+}
+read_env
 
 : "${POSTGRES_USER:?POSTGRES_USER is not set; is .env present?}"
 : "${POSTGRES_DB:?POSTGRES_DB is not set; is .env present?}"
