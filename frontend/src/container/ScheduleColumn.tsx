@@ -83,8 +83,8 @@ export function ScheduleColumn({
       group.forEach((ev, idx) => {
         const startPx = toPxFromDate(ev.startAt, dayStart, hourHeight);
         const endPx = toPxFromDate(ev.finishAt, dayStart, hourHeight);
-        let top = Math.max(0, startPx);
-        let bottom = Math.min(columnHeight, endPx);
+        const top = Math.max(0, startPx);
+        const bottom = Math.min(columnHeight, endPx);
         const height = Math.max(6, bottom - top);
         if (bottom <= 0 || top >= columnHeight) return; // skip invisible
         laid.push({

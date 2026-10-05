@@ -35,7 +35,7 @@ export function Modal({
   if (variant === "canvas") {
     return (
       <div
-        className="fixed inset-0 z-50 bg-[#0f0f10] text-neutral-100 antialiased"
+        className="fixed inset-0 z-[100] bg-[#0f0f10] text-neutral-100 antialiased"
         role="dialog"
         aria-modal="true"
         aria-label={title ?? "Dialog"}
@@ -56,7 +56,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-[100] flex items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-label={title ?? "Dialog"}

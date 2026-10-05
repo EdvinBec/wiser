@@ -51,7 +51,10 @@ export function CurrentTimeIndicator({
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 z-50 overflow-visible"
+      // z-20 keeps the marker above the event blocks while staying well below the modal
+      // layer. At z-50 it tied with the modal, and DOM order then painted this line
+      // straight across an open dialog.
+      className="pointer-events-none absolute inset-x-0 z-20 overflow-visible"
       style={{top, transform: 'translateY(-50%)'}}>
       {/* Red line */}
       <div
