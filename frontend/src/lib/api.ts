@@ -7,13 +7,7 @@
 
 import type {WiseSelection} from './wiseApi';
 
-/**
- * Empty means "same origin": the page and the API are served from one host, nginx proxies
- * /auth, /user and /api to the backend, and the browser makes no cross-origin request at all.
- * `??` rather than `||` matters here — an empty string is the deliberate production value, and
- * `||` would treat it as unset and fall back to localhost.
- */
-const API_HOST = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5013';
+import {API_HOST} from './apiHost';
 
 async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_HOST}${path}`, init);

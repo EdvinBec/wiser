@@ -1,3 +1,4 @@
+import {API_HOST} from '@/lib/apiHost';
 import {useEffect, useState, type ReactNode} from 'react';
 import {AuthContext, type User} from './AuthContext.shared';
 
@@ -44,8 +45,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
   }, [token]);
 
   const login = () => {
-    const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5013';
-    window.location.href = `${base}/auth/google`;
+    window.location.href = `${API_HOST}/auth/google`;
   };
 
   const logout = () => {

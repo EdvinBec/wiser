@@ -4,3 +4,11 @@ dev-dist
 .git
 .vscode
 *.log
+
+# A developer's local .env must never reach an image build. Vite reads .env from the project
+# directory and it wins over the build argument, so a local
+# VITE_API_BASE_URL=http://localhost:5013 would be baked into the production bundle and send
+# every visitor's sign-in to their own machine.
+.env
+.env.*
+!.env.example
