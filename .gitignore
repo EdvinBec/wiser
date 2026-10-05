@@ -78,3 +78,6 @@ deploy/backups/
 
 # Docker CLI config, kept out of the encrypted home (see deploy/update.sh)
 .docker/
+
+# Written by deploy/update.sh after a successful deploy
+.deployed-commit

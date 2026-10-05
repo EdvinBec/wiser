@@ -31,7 +31,12 @@ if [[ -f .env ]]; then
   HEALTH_URL="http://127.0.0.1:${FRONTEND_PORT:-8080}/api/wise/published"
 fi
 
-before="$(git rev-parse HEAD)"
+# What is actually DEPLOYED, not what git did on this run. Comparing the commit before and
+# after the pull looked right but was wrong: anyone who ran `git pull` by hand first left the
+# two equal, and the script then skipped the rebuild while the containers still ran the old
+# code — silently, reporting success.
+DEPLOYED_FILE=".deployed-commit"
+deployed="$(cat "$DEPLOYED_FILE" 2>/dev/null || echo none)"
 
 log "fetching"
 git fetch --quiet origin
@@ -39,12 +44,12 @@ git pull --quiet --ff-only
 
 after="$(git rev-parse HEAD)"
 
-if [[ "$before" == "$after" && "${1:-}" != "--force" ]]; then
-  log "already at $after, nothing to do"
+if [[ "$deployed" == "$after" && "${1:-}" != "--force" ]]; then
+  log "already deployed $after, nothing to do"
   exit 0
 fi
 
-log "building ($before -> $after)"
+log "building ($deployed -> $after)"
 "${COMPOSE[@]}" build
 
 log "swapping containers"
@@ -62,8 +67,12 @@ for _ in $(seq 1 30); do
 done
 
 if [[ "$healthy" != true ]]; then
-  log "UNHEALTHY after update — rolling back to $before"
-  git reset --hard --quiet "$before"
+  log "UNHEALTHY after update — rolling back to $deployed"
+  if [[ "$deployed" != none ]]; then
+    git reset --hard --quiet "$deployed"
+  else
+    log "no previously deployed commit recorded; leaving the checkout where it is"
+  fi
   "${COMPOSE[@]}" build
   "${COMPOSE[@]}" up -d --remove-orphans
   log "rolled back; investigate with: ${COMPOSE[*]} logs --tail 100"
@@ -71,6 +80,7 @@ if [[ "$healthy" != true ]]; then
 fi
 
 log "healthy at $after"
+echo "$after" > "$DEPLOYED_FILE"
 
 # Images from previous builds pile up fast on a laptop disk.
 docker image prune -f >/dev/null

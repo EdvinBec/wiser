@@ -324,40 +324,49 @@ docker compose --profile tools up -d pgadmin        # needs PGADMIN_PASSWORD in 
 
 ## 10. State
 
-Last updated 6 October 2026, after the first deployment on the server laptop.
+Last updated 6 October 2026. The site is live at **https://urnik.online**.
 
 **Running:**
 
 - Linux Mint 21.3 (virginia), Ubuntu 22.04 base, supported to April 2027. Upgraded from 20.3,
   which was end-of-life with 336 packages outstanding.
-- Docker 29.8.2 and Compose v5.6.0, from the `ubuntu/jammy` repository — the install script's
-  own detection picked Debian bookworm, because Mint carries a misleading
-  `/etc/debian_version`, and that was corrected.
-- The stack at `/opt/wiser`, all three containers healthy, serving live Wise data.
-- systemd: `wiser.service` at boot, backup at 03:30, update at 04:32. Both scripts have been
-  run by hand and work.
-- Google sign-in configured and redirecting to accounts.google.com.
-- SSH by key from the Windows machine, with `authorized_keys` outside the encrypted home so it
-  survives a reboot with nobody logged in.
+- Docker 29.8.2 and Compose v5.6.0 from the `ubuntu/jammy` repository. The install script's own
+  detection picked Debian bookworm, because Mint carries a misleading `/etc/debian_version`.
+- The stack at `/opt/wiser`, three containers, serving live Wise data.
+- Cloudflare Tunnel as a systemd service, four connections, HTTPS terminated by Cloudflare.
+  DNS: `urnik.online`, `www`, `ssh`, all CNAMEs to the tunnel. No port is open on the router.
+- Google sign-in working end to end.
+- systemd: `wiser.service` at boot, backup 03:30, update 04:32. Both scripts verified by hand.
+- `dropbear-initramfs` on port 2222 for unlocking the disk remotely.
 
-**Machine-specific things worth knowing:**
+**Verified, not assumed:**
+
+A power cut was simulated by pulling the plug. The disk was unlocked over SSH from another
+machine, the system came up with nobody logged in, all three containers returned healthy in
+about fifty seconds, and Postgres completed WAL recovery on its own. An update swap takes about
+two seconds of downtime, with the build happening beforehand while the old containers serve.
+
+**Machine-specific things that will bite you again:**
 
 - The account is `cevapar123`, not `wiser`. `deploy/install-units.sh` fills that in.
-- `/home` is eCryptfs-encrypted on top of the LUKS disk encryption, which is why the checkout
-  lives in `/opt` and the SSH key in `/etc/ssh/authorized_keys/`. Anything under `/home` is
-  unreadable until somebody logs in with a password.
-- The battery reports 0% and exposes no capacity data, so it is NOT a UPS. A power cut means a
-  hard stop at the LUKS prompt.
-- WiFi had power-save on, which dropped connections; disabled on the connection and live.
-  The connection is system-wide with autoconnect, so it comes up without a login.
+- `/home` is eCryptfs-encrypted on top of LUKS and is only mounted at interactive login. This
+  broke three separate things before it was understood: the application (hence `/opt`), the SSH
+  key (hence `/etc/ssh/authorized_keys/`), `cloudflared` (hence `/etc/cloudflared/`) and the
+  Docker CLI (hence `DOCKER_CONFIG` beside the checkout). Anything that writes to `$HOME` from
+  a timer will fail the same way.
+- The battery reports 0% and exposes no capacity data. It is NOT a UPS, which is why a power
+  cut is a real reboot. A replacement battery or a small UPS removes this problem at the root.
+- `dropbear` only answers over ETHERNET — the initramfs has no WiFi stack. The cable must stay
+  plugged in, and dropbear is reachable on the LAN only, so remote unlock from outside the
+  house does not work without a VPN on the router.
+- WiFi power-save was dropping connections; disabled, and the connection is system-wide with
+  autoconnect so it comes up without a login.
 
 **Not done:**
 
-- The tunnel. `cloudflared` is installed; the domain `urnik.online` was still moving to
-  Cloudflare nameservers when this was written.
-- Remote disk unlock (§4.5). Every reboot still needs someone at the keyboard.
-- An off-machine copy of `deploy/backups/`.
-- A reboot test of the whole stack coming back on its own.
+- An off-machine copy of `deploy/backups/`. The dumps sit on the disk they protect.
+- Remote unlock from outside the house.
+- A replacement battery or UPS.
 
 **Deliberately left:**
 
