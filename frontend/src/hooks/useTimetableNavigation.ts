@@ -54,7 +54,7 @@ export function useTimetableNavigation(): UseTimetableNavigationReturn {
     {
       legacyKeys: ['timetableSelectedDayV1'],
       serialize: (d) => (d ? d.toISOString() : ''),
-      deserialize: (_s) => {
+      deserialize: () => {
         const urlD = new URLSearchParams(window.location.search).get('d');
         // Parse as local noon to avoid UTC midnight shifting the date across timezone boundaries
         if (urlD) return new Date(urlD + 'T12:00:00');
@@ -73,7 +73,7 @@ export function useTimetableNavigation(): UseTimetableNavigationReturn {
     {
       legacyKeys: ['timetableSelectedWeekV1'],
       serialize: (n) => (n !== null ? String(n) : ''),
-      deserialize: (_s) => {
+      deserialize: () => {
         const urlW = new URLSearchParams(window.location.search).get('w');
         if (urlW) return Number(urlW);
         return getAcademicWeekNumber(new Date());
