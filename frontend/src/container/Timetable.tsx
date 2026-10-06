@@ -17,6 +17,7 @@ import {
 import {useTimetableNavigation} from '@/hooks/useTimetableNavigation';
 import {useAcademicCalendar} from '@/hooks/useAcademicCalendar';
 import {useWiseSchedule} from '@/hooks/useWiseSchedule';
+import {useAuth} from '@/contexts/AuthContext.shared';
 import {TimetableControls} from './TimetableControls';
 import {CurrentTimeIndicator} from './CurrentTimeIndicator';
 import PageHeader from '@/components/PageHeader.tsx';
@@ -53,6 +54,8 @@ export function Timetable({headerTitle}: {headerTitle?: string}) {
     publishedAt,
     hasSelections,
   } = useWiseSchedule({selectedView, selectedDay, selectedWeek, academicYear});
+
+  const {isAuthenticated, login} = useAuth();
 
   const [showFilterModal, setShowFilterModal] = useState(false);
 
@@ -99,10 +102,14 @@ export function Timetable({headerTitle}: {headerTitle?: string}) {
     try { localStorage.setItem('themeV2', isDark ? 'dark' : 'light'); } catch { /* storage unavailable */ }
   }, [isDark]);
 
-  // An empty timetable has nothing to show, so open the builder straight away.
+  // An empty timetable has nothing to show, so open the builder straight away — but only for
+  // somebody signed in, whose empty timetable really does mean "nothing picked yet". Signed
+  // out it means something else entirely, and may well mean a timetable sitting safely on an
+  // account: the welcome modal offers to sign in, and this one used to open on top of it and
+  // bury the offer under a subject picker.
   useEffect(() => {
-    if (!hasSelections) setShowFilterModal(true);
-  }, [hasSelections]);
+    if (isAuthenticated && !hasSelections) setShowFilterModal(true);
+  }, [isAuthenticated, hasSelections]);
 
   // The old staleness toast is gone on purpose. It measured how long ago OUR scraper last ran,
   // which needed warning about. What we now show is when the SCHOOL last published, and that
@@ -208,9 +215,33 @@ export function Timetable({headerTitle}: {headerTitle?: string}) {
 
       {!hasSelections ? (
         <div className="mt-8 flex flex-col items-center gap-3 text-center text-muted-foreground">
-          <p className="text-sm">Urnik je še prazen.</p>
+          {/* An empty timetable and a lost session used to look identical here — both just said
+              "still empty". For anyone who had already built a timetable that reads as data
+              loss, when in truth their subjects were on their account the whole time and the
+              app simply had no token to fetch them with. Say which of the two it is. */}
+          {isAuthenticated ? (
+            <p className="text-sm">Urnik je še prazen.</p>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-foreground">
+                {t.auth.signedOutTitle}
+              </p>
+              <p className="max-w-prose text-sm leading-relaxed">
+                {t.auth.signedOutBody}
+              </p>
+              <button
+                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+                onClick={login}>
+                {t.auth.continueWithGoogle}
+              </button>
+            </>
+          )}
           <button
-            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+            className={
+              isAuthenticated
+                ? 'inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700'
+                : 'inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-foreground hover:bg-primary/10'
+            }
             onClick={() => setShowFilterModal(true)}>
             Dodaj predmet
           </button>

@@ -1,7 +1,7 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useLocalStorageState} from './useLocalStorageState';
 import {useAuth} from '@/contexts/AuthContext.shared';
-import {getStoredSelections, saveStoredSelections} from '@/lib/api';
+import {ApiError, getStoredSelections, saveStoredSelections} from '@/lib/api';
 import {
   fetchPublishedAt,
   fetchWiseTimetable,
@@ -84,6 +84,52 @@ function addDays(d: Date, n: number): Date {
   return copy;
 }
 
+/**
+ * Unions what the account holds with what this device holds, one entry per subject.
+ *
+ * Signing in used to REPLACE the device's list with the account's, and nothing ever pushed the
+ * other way. Both halves of that were wrong, and between them they produced an account with a
+ * row in it and no timetable on it: subjects picked before signing in were either overwritten
+ * by the account's older list or left sitting on the one device, saved nowhere.
+ *
+ * `localWins` settles a subject the two disagree about. An edit made during this visit is the
+ * student's latest intent and leads; an untouched local copy may be weeks stale, and then the
+ * account leads. There are no timestamps to do better than that.
+ */
+function mergeSelections(
+  server: WiseSelection[],
+  local: WiseSelection[],
+  localWins: boolean,
+): WiseSelection[] {
+  const bySubject = new Map<number, WiseSelection>();
+  // Insertion order survives, so the leader's ordering is kept and the other side's extras are
+  // appended after it.
+  for (const s of localWins ? server : local) bySubject.set(s.subjectId, s);
+  for (const s of localWins ? local : server) bySubject.set(s.subjectId, s);
+  return [...bySubject.values()];
+}
+
+/**
+ * Identity of a selection list, insensitive to ordering — of the subjects and of the keys inside
+ * each one's picks. Used only to decide whether the account needs writing to, so a false
+ * "different" costs one redundant request and a false "same" would cost a lost timetable.
+ */
+function fingerprint(list: WiseSelection[]): string {
+  return JSON.stringify(
+    list
+      .map((s) => {
+        const picks = s.picks ?? {};
+        return [
+          s.subjectId,
+          Object.keys(picks)
+            .sort()
+            .map((k) => [k, picks[k]]),
+        ] as const;
+      })
+      .sort((a, b) => a[0] - b[0]),
+  );
+}
+
 type Params = {
   selectedView: 'day' | 'week';
   selectedDay: Date | null;
@@ -97,7 +143,7 @@ export function useWiseSchedule({
   selectedWeek,
   academicYear,
 }: Params) {
-  const {isAuthenticated, token} = useAuth();
+  const {isAuthenticated, token, endSession} = useAuth();
 
   const [selections, setSelectionsLocal] = useLocalStorageState<WiseSelection[]>(
     STORAGE_KEY,
@@ -117,41 +163,81 @@ export function useWiseSchedule({
   const [events, setEvents] = useState<TimetableEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serverLoaded, setServerLoaded] = useState(false);
+
+  // Has this visit touched the selections? Decides who leads in mergeSelections.
+  const editedHere = useRef(false);
+
+  // The merge needs the current local list but must not re-run when it changes, or it would
+  // fight its own result. A ref keeps the effect keyed on the session alone.
+  const selectionsRef = useRef(selections);
+  selectionsRef.current = selections;
 
   // Selections live in the existing GroupFilters column, tagged with a version so the old
   // per-class filter payload is still recognisable and simply ignored.
   useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
     let cancelled = false;
     (async () => {
-      if (isAuthenticated && token) {
-        try {
-          const data = await getStoredSelections(token);
-          const parsed = data.groupFilters ? JSON.parse(data.groupFilters) : null;
-          if (!cancelled && parsed?.v === 2 && Array.isArray(parsed.selections)) {
-            setSelectionsLocal(parsed.selections as WiseSelection[]);
-          }
-        } catch {
-          // Keep whatever localStorage had; the timetable still works offline.
+      let serverList: WiseSelection[] = [];
+      try {
+        const data = await getStoredSelections(token);
+        const parsed = data.groupFilters ? JSON.parse(data.groupFilters) : null;
+        if (parsed?.v === 2 && Array.isArray(parsed.selections)) {
+          serverList = parsed.selections as WiseSelection[];
         }
+      } catch (e) {
+        // A 401 means this token is finished — past its thirty days, or signed with a key this
+        // server no longer holds. Swallowing it is exactly what let the header show a name
+        // while the timetable underneath stayed empty, with nothing on screen to explain why.
+        if (e instanceof ApiError && e.status === 401) {
+          if (!cancelled) endSession();
+          return;
+        }
+        // Anything else is the server being unwell. Keep what the device has; the timetable
+        // still works without an account.
+        return;
       }
-      if (!cancelled) setServerLoaded(true);
+      if (cancelled) return;
+
+      const merged = mergeSelections(
+        serverList,
+        selectionsRef.current,
+        editedHere.current,
+      );
+      setSelectionsLocal(merged);
+
+      // Push back whenever the device knew something the account did not. This is the step that
+      // was missing altogether, and without it subjects picked before signing in never reached
+      // the account — they stayed on one phone until its storage was cleared.
+      if (fingerprint(merged) !== fingerprint(serverList)) {
+        saveStoredSelections(token, merged).catch(() => {
+          // Already on the device; a failed sync must not lose it.
+        });
+      }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, token, setSelectionsLocal]);
+  }, [isAuthenticated, token, endSession, setSelectionsLocal]);
 
   const persist = useCallback(
     (next: WiseSelection[]) => {
+      editedHere.current = true;
       setSelectionsLocal(next);
-      if (isAuthenticated && token && serverLoaded) {
+      // Writes are no longer held back until the account's list has arrived. That gate dropped
+      // the first picks made after signing in whenever the student reached the builder before
+      // the response did — and the builder opens itself the moment the timetable is empty,
+      // which makes that the common case, not the rare one. Writing straight away is safe
+      // because the merge above unions rather than replaces.
+      if (isAuthenticated && token) {
         saveStoredSelections(token, next).catch(() => {
           // Local copy already updated; a failed sync must not lose the edit.
         });
       }
     },
-    [isAuthenticated, token, serverLoaded, setSelectionsLocal],
+    [isAuthenticated, token, setSelectionsLocal],
   );
 
   const addSelection = useCallback(
