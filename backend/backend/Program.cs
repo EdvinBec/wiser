@@ -1,5 +1,7 @@
 using System.Net;
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using backend.Infrastructure.Database;
 using backend.Misc;
@@ -74,6 +76,36 @@ if (googleConfigured)
     options.ClientId = googleClientId!;
     options.ClientSecret = googleClientSecret!;
     options.SignInScheme = "Cookies";
+
+    // Google returns the avatar as a "picture" key in its userinfo JSON. The handler maps
+    // sub, name, given_name, family_name, email and link — not that one — so the callback's
+    // lookup for a "picture" claim found nothing and AvatarUrl was null for every account.
+    // Lift it off the raw payload and add the claim the callback already reads.
+    options.Events.OnCreatingTicket = context =>
+    {
+        if (context.User.TryGetProperty("picture", out var picture)
+            && picture.ValueKind == JsonValueKind.String)
+        {
+            var url = picture.GetString();
+            if (!string.IsNullOrWhiteSpace(url))
+                context.Identity?.AddClaim(new Claim("picture", url));
+        }
+        return Task.CompletedTask;
+    };
+
+    // The correlation cookie guards the callback against replay, and losing it is fatal to
+    // sign-in: the handler throws "Correlation failed" and Kestrel turns that into a 500 the
+    // visitor can do nothing with. Its defaults are SameSite=None with
+    // SecurePolicy=SameAsRequest, which is a trap behind a terminating tunnel — the moment the
+    // app believes the request is http the cookie ships without Secure, and SameSite=None
+    // without Secure is rejected by every current browser. Lax is sent on the top-level
+    // navigation Google performs on the way back and does not depend on Secure at all, so
+    // sign-in survives even if the scheme is ever misread again.
+    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    options.CorrelationCookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+
     // Behind a terminating tunnel the app sees plain http, so the redirect_uri handed to
     // Google would come back as http:// and be rejected. Skipped in development, where the
     // address really is http://localhost and rewriting it breaks sign-in locally.
@@ -83,6 +115,19 @@ if (googleConfigured)
             ? context.RedirectUri
             : context.RedirectUri.Replace("http://", "https://");
         context.Response.Redirect(uri);
+        return Task.CompletedTask;
+    };
+
+    // Anything that goes wrong in the remote half of the handshake — a dropped correlation
+    // cookie, a stale state, a user who took too long — used to escape as an unhandled
+    // exception and a blank 500. Hand the visitor back to the app with a reason instead, so
+    // they see a message and can try again.
+    options.Events.OnRemoteFailure = context =>
+    {
+        var frontend = builder.Configuration["Frontend:Url"] ?? "http://localhost:5173";
+        var reason = Uri.EscapeDataString(context.Failure?.Message ?? "unknown");
+        context.Response.Redirect($"{frontend}/login/callback?error={reason}");
+        context.HandleResponse();
         return Task.CompletedTask;
     };
 });

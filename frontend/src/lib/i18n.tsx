@@ -66,6 +66,9 @@ type Dict = {
     haveAccount: string;
     signIn: string;
     continueAsGuest: string;
+    signedOutTitle: string;
+    signedOutBody: string;
+    signInFailed: string;
   };
   details: {
     type: string;
@@ -138,6 +141,10 @@ const dicts: Record<Locale, Dict> = {
       haveAccount: "Already have an account?",
       signIn: "Log in",
       continueAsGuest: "Continue as guest →",
+      signedOutTitle: "You are not signed in",
+      signedOutBody:
+        "If you have already built a timetable, it is saved to your account — sign in to bring it to this device. Installing the app from the home screen starts it signed out, because it keeps its own storage, separate from the browser.",
+      signInFailed: "Sign-in did not complete. Please try again.",
     },
     details: {
       type: "Type",
@@ -219,6 +226,10 @@ const dicts: Record<Locale, Dict> = {
       haveAccount: "Že imaš račun?",
       signIn: "Prijava",
       continueAsGuest: "Nadaljuj kot gost →",
+      signedOutTitle: "Niste prijavljeni",
+      signedOutBody:
+        "Če ste si urnik že sestavili, je shranjen v vašem računu — prijavite se, da ga prenesete na to napravo. Aplikacija, nameščena z začetnega zaslona, se zažene odjavljena, ker ima svojo shrambo, ločeno od brskalnika.",
+      signInFailed: "Prijava ni bila zaključena. Poskusite znova.",
     },
     details: {
       type: "Vrsta",

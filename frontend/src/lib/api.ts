@@ -9,11 +9,29 @@ import type {WiseSelection} from './wiseApi';
 
 import {API_HOST} from './apiHost';
 
+/**
+ * Carries the HTTP status alongside the message. A caller that cannot tell 401 from 500 cannot
+ * tell "your session ended" from "the server is unwell", and the difference decides whether the
+ * right move is to sign the student out or to keep what is on screen and retry.
+ */
+export class ApiError extends Error {
+  // Written out rather than declared as a constructor parameter property: the build runs with
+  // `erasableSyntaxOnly`, which rejects the shorthand.
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_HOST}${path}`, init);
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(
+    throw new ApiError(
+      res.status,
       ((data as Record<string, unknown>).message as string) ||
         `Request failed: ${res.status}`,
     );
@@ -29,6 +47,10 @@ function authHeaders(token: string, json = false): HeadersInit {
 }
 
 // ── Authentication ──────────────────────────────────────────────────────────
+//
+// Google sign-in is not here: it is a full-page trip to /auth/google and back, so it never goes
+// through fetch — see AuthContext. These two are the email-and-password path, posted by the
+// forms in the sign-in modal.
 
 export function loginWithEmail(
   email: string,
